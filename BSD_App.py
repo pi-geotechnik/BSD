@@ -271,7 +271,7 @@ Expert opinion is required!
 Based on a defined worst-case scenario (with a certain annuality), events/block sizes with higher return periods may be neglected (cut off). 
 At the lower end, simulation programs are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
 
-This app is a open source project. 
+This app is an open source project. 
 """)
 
 # --- Sidebar for user input ---
