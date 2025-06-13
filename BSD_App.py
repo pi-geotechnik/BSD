@@ -251,7 +251,6 @@ st.markdown("""
 *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH.*
 
 This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
-
 Corresponding reference: [Scientific article on SpringerLink](https://link.springer.com/article/10.1007/s11069-024-06432-4)
 
 Version 2.1, June 2025
@@ -571,10 +570,10 @@ else:
         )
 
         # 3. Output Type Selection
-        st.markdown("Choose the output unit for the generated block list:")
+        st.markdown("Choose the output unit for the generated block list (block mass (t) is required for THROW):")
         selected_output_unit = st.radio(
             "Output Unit:",
-            ('Block Axis (m)', 'Block Volume (m³)', 'Block Mass (t)'),
+            ('Block Volume (m³)', 'Block Mass (t)'),
             key="output_unit_selector"
         )
 
@@ -623,10 +622,10 @@ else:
                     if final_generated_blocks_m_axis:
                         # Convert to desired output unit
                         final_output_blocks_converted = []
-                        if selected_output_unit == 'Block Axis (m)':
-                            final_output_blocks_converted = final_generated_blocks_m_axis
-                            st.session_state.output_unit_for_download = 'm'
-                        elif selected_output_unit == 'Block Volume (m³)':
+                        #if selected_output_unit == 'Block Axis (m)':
+                        #    final_output_blocks_converted = final_generated_blocks_m_axis
+                        #    st.session_state.output_unit_for_download = 'm'
+                        if selected_output_unit == 'Block Volume (m³)':
                             final_output_blocks_converted = [x**3 for x in final_generated_blocks_m_axis]
                             st.session_state.output_unit_for_download = 'm3'
                         elif selected_output_unit == 'Block Mass (t)':
@@ -667,12 +666,12 @@ else:
     if 'generated_blocks_for_download' in st.session_state and st.session_state.generated_blocks_for_download and st.session_state.output_unit_for_download:
         
         # Format the blocks as a string, each on a new line
-        # Use different precision for axis (m) vs mass/volume (t/m3)
-        if st.session_state.output_unit_for_download == 'm': 
-             output_string = "\n".join(f"{x:.3f}" for x in st.session_state.generated_blocks_for_download) # 3 decimal places for m
-             file_name = f"{selected_download_distribution}_filtered_axis_m.txt"
-        else: # 't' or 'm3'
-             output_string = "\n".join(f"{x:.6f}" for x in st.session_state.generated_blocks_for_download) # 6 decimal places for t or m3
+        # Use different precision for volume (m³) vs mass (t)
+        if st.session_state.output_unit_for_download == 'm³':  # 'm3'
+             output_string = "\n".join(f"{x:.6f}" for x in st.session_state.generated_blocks_for_download) # 6 decimal places for m³
+             file_name = f"{selected_download_distribution}_filtered_{st.session_state.output_unit_for_download}.txt"
+        else: # 't'
+             output_string = "\n".join(f"{x:.6f}" for x in st.session_state.generated_blocks_for_download) # 6 decimal places for t
              file_name = f"{selected_download_distribution}_filtered_{st.session_state.output_unit_for_download}.txt"
 
         st.download_button(
