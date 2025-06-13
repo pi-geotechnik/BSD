@@ -247,13 +247,16 @@ def clear_all_data():
 # Header und Info
 st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
 st.title("Block Size Distribution")
-st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
-st.markdown("*developed in the course of her Doctoral Thesis 'Procedures for assessing the hazard posed by rock slopes'*")
-st.markdown("Link: https://link.springer.com/article/10.1007/s11069-024-06432-4")
-st.markdown("*adapted as Streamlit-App by Mariella ILLEDITSCH**")
-st.markdown("Version 1, June 2025")
-st.markdown("This application visualizes block size distributions, fits distribution functions to them and returns blocklists of the fitted distribution for rockfall simulation (e.g. with THROW).")
-st.markdown("Link to THROW: https://pigeotechnik.pythonanywhere.com/")
+st.markdown("""
+    *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH*
+    *developed in the course of her doctoral thesis 2023 'Procedures for assessing the hazard posed by rock slopes'*
+    Corresponding reference: [Scientific article on SpringerLink](https://link.springer.com/article/10.1007/s11069-024-06432-4)
+    
+    Version 2.1, June 2025
+    
+    This application visualizes block size distributions, fits distribution functions to them and returns blocklists of the fitted distribution for rockfall simulation (e.g. with THROW).
+    Link to THROW: [THROW application](https://pigeotechnik.pythonanywhere.com/)
+""")
 
 # --- Sidebar for user input ---
 with st.sidebar:
