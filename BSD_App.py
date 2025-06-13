@@ -251,7 +251,7 @@ st.markdown("""
 *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH.*
 
 This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
-Corresponding reference: [Scientific article on SpringerLink](https://link.springer.com/article/10.1007/s11069-024-06432-4)
+Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021?msockid=0f6932b2fb8d63ee018527a8fa6a62a9), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4)
 
 Version 2.1, June 2025
 
