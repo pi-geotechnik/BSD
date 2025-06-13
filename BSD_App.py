@@ -245,16 +245,16 @@ def clear_all_data():
 # --- Streamlit App Layout ---
 
 # Header und Info
-st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
-st.title("Block Size Distribution")
+#st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
+#st.title("Block Size Distribution")
 st.markdown("""
 *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH.*
-
+This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
 Corresponding reference: [Scientific article on SpringerLink](https://link.springer.com/article/10.1007/s11069-024-06432-4)
 
-Version 2, June 2025
+Version 2.1, June 2025
 
-This application visualizes block size distributions, fits distribution functions to them and returns blocklists of the fitted distribution for rockfall simulation (e.g. with [THROW application](https://pigeotechnik.pythonanywhere.com/)).
+This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW application](https://pigeotechnik.pythonanywhere.com/)).
 """)
 
 # --- Sidebar for user input ---
