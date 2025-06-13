@@ -267,19 +267,16 @@ with st.sidebar:
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
 
     # Check if the unit has changed
+    unit_changed = False
     if st.session_state.einheit != selected_unit:
         st.session_state.einheit = selected_unit
+        unit_changed = True
         # Clear all data if unit changes, forcing re-upload
         clear_all_data()
-        # Set a flag to show the warning message
-        st.session_state.show_unit_change_warning = True
-        #st.rerun()
 
-    # Show warning message if unit was changed
-    if st.session_state.get('show_unit_change_warning', False):
+    # Show warning message if unit was changed OR if no data is loaded
+    unit_changed or st.session_state.m_achsen is None:
         st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
-        # Clear the flag after showing the message
-        st.session_state.show_unit_change_warning = False
 
     # Density input only if mass is selected
     density_input = None
