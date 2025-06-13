@@ -255,7 +255,7 @@ Corresponding reference: [Scientific article on SpringerLink](https://link.sprin
 
 Version 2.1, June 2025
 
-This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW application](https://pigeotechnik.pythonanywhere.com/)).
+This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW](https://pigeotechnik.pythonanywhere.com/)).
 """)
 
 # --- Sidebar for user input ---
@@ -437,7 +437,7 @@ if st.session_state.last_error_message:
     st.session_state.last_error_message = None
 
 if st.session_state.m_achsen is None:
-    st.info("Please select a unit and load an example file or upload your own file to get started.")
+    st.info("Please select a unit in the left sidebar and upload a sample file or upload your own file to get started.")
 else:
     # Display file information
     if st.session_state.uploaded_filename and st.session_state.block_count is not None:
