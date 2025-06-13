@@ -487,8 +487,194 @@ else:
             styled_df = df1.style.apply(highlight_rows, axis=0) 
             styled_df = styled_df.hide(axis="index") 
             st.dataframe(styled_df)
-
+            
         except Exception as e:
             st.error(f"Could not calculate percentiles: {e}. Please ensure data is loaded correctly and distributions are fitted.")
     else:
         st.info("Please load data and ensure distributions are fitted to see the percentile table.")
+        
+        
+        
+# --- NEUER ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
+    st.subheader("Generate and download filtered distribution")
+    st.markdown("Select a fitted distribution and define the block axis range to generate a custom block list. You can then choose the output unit for download.")
+
+    # Determine which distributions have fitted parameters and can be selected
+    available_dists_for_download = []
+    # Check if parameters for genexpon are available
+    if 'a1' in st.session_state and 'b1' in st.session_state and 'c1' in st.session_state and 'loc1' in st.session_state and 'scale1' in st.session_state:
+        available_dists_for_download.append('genexpon')
+    # Check if parameters for expon are available
+    if 'loc3' in st.session_state and 'scale3' in st.session_state:
+        available_dists_for_download.append('expon')
+    # Check if parameters for powerlaw are available
+    if 'a4' in st.session_state and 'loc4' in st.session_state and 'scale4' in st.session_state:
+        available_dists_for_download.append('powerlaw')
+    
+    selected_download_distribution = None
+    if not available_dists_for_download:
+        st.info("Please load data and select one distribution in the 'Fitting Probability Functions' section to enable generating a filtered distribution.")
+        generation_possible_overall = False # Flag to disable generation controls
+    else:
+        selected_download_distribution = st.selectbox(
+            "Select Distribution for Generation:",
+            options=available_dists_for_download,
+            key="selected_download_dist"
+        )
+        generation_possible_overall = True
+
+
+    # Display controls only if at least one distribution is available for generation
+    if generation_possible_overall:
+        st.markdown(f"Generating blocks from the fitted **{selected_download_distribution}** distribution.")
+
+        # 2. Min/Max Block Axis Input (for block axis [m])
+        st.markdown("Set the minimum and maximum **block axis** values for the generated distribution (values outside this range will be excluded).")
+        col_min_max_1, col_min_max_2 = st.columns(2)
+        with col_min_max_1:
+            min_block_axis = st.number_input(
+                "Minimum Block Axis [m]:", 
+                min_value=0.01, 
+                value=0.01, # Default value
+                step=0.01, 
+                format="%.2f", 
+                key="min_block_axis_input_download"
+            )
+        with col_min_max_2:
+            max_block_axis = st.number_input(
+                "Maximum Block Axis [m]:", 
+                min_value=min_block_axis + 0.01, # Ensures max > min
+                value=5.00, # Default value
+                step=0.01, 
+                format="%.2f", 
+                key="max_block_axis_input_download"
+            )
+
+        if min_block_axis >= max_block_axis:
+            st.error("Minimum block axis must be less than maximum block axis.")
+            generation_possible_overall = False # Disable generation if range is invalid
+
+
+        # Number of samples to generate
+        num_samples = st.slider(
+            "Number of blocks to generate:", 
+            min_value=1000, 
+            max_value=1000000, 
+            value=1000, 
+            step=1000, 
+            key="num_samples_slider_download",
+            help="Generate a larger number of samples to ensure sufficient blocks after filtering."
+        )
+
+        # 3. Output Type Selection
+        st.markdown("Choose the output unit for the generated block list:")
+        selected_output_unit = st.radio(
+            "Output Unit:",
+            ('Block Axis (m)', 'Block Volume (m³)', 'Block Mass (t)'),
+            key="output_unit_selector"
+        )
+
+        download_density_kg_m3 = None
+        if selected_output_unit == 'Block Mass (t)':
+            download_density_kg_m3 = st.number_input(
+                "Density for mass calculation (kg/m³):", 
+                min_value=250, 
+                value=2650, 
+                step=10, 
+                key="download_density_input"
+            )
+            if download_density_kg_m3 <= 0:
+                st.error("Density must be greater than 0 for mass calculation.")
+                generation_possible_overall = False # Disable generation if density is invalid
+
+        # Generation Button
+        if generation_possible_overall:
+            if st.button("Generate Filtered Block List", key="generate_filtered_button"):
+                with st.spinner("Generating and filtering distribution..."):
+                    generated_raw_axes = []
+                    params_for_rvs = ()
+                    
+                    # Get parameters based on selected distribution
+                    if selected_download_distribution == 'genexpon':
+                        params_for_rvs = (st.session_state.a1, st.session_state.b1, st.session_state.c1, 
+                                          st.session_state.loc1, st.session_state.scale1)
+                        dist_function = stats.genexpon
+                    elif selected_download_distribution == 'expon':
+                        params_for_rvs = (st.session_state.loc3, st.session_state.scale3)
+                        dist_function = stats.expon
+                    elif selected_download_distribution == 'powerlaw':
+                        params_for_rvs = (st.session_state.a4, st.session_state.loc4, st.session_state.scale4)
+                        dist_function = stats.powerlaw
+                    
+                    # Generate more samples to account for filtering
+                    # This ensures we have enough data points after filtering for narrow ranges
+                    generated_raw_axes = dist_function.rvs(*params_for_rvs, size=num_samples * 10) 
+                    
+                    # Filter samples based on min/max block axis
+                    filtered_samples_m_axis = [s for s in generated_raw_axes if min_block_axis <= s <= max_block_axis]
+                    
+                    # Take exactly num_samples, or fewer if not enough were generated, and sort
+                    final_generated_blocks_m_axis = sorted(filtered_samples_m_axis[:num_samples])
+                    
+                    if final_generated_blocks_m_axis:
+                        # Convert to desired output unit
+                        final_output_blocks_converted = []
+                        if selected_output_unit == 'Block Axis (m)':
+                            final_output_blocks_converted = final_generated_blocks_m_axis
+                            st.session_state.output_unit_for_download = 'm'
+                        elif selected_output_unit == 'Block Volume (m³)':
+                            final_output_blocks_converted = [x**3 for x in final_generated_blocks_m_axis]
+                            st.session_state.output_unit_for_download = 'm3'
+                        elif selected_output_unit == 'Block Mass (t)':
+                            if download_density_kg_m3 and download_density_kg_m3 > 0:
+                                final_output_blocks_converted = [(x**3 * download_density_kg_m3) / 1000 for x in final_generated_blocks_m_axis]
+                                st.session_state.output_unit_for_download = 't'
+                            else:
+                                st.error("Invalid density for mass calculation. Please provide a positive density.")
+                                final_output_blocks_converted = [] # Clear if density is invalid
+                                st.session_state.output_unit_for_download = None
+
+                        st.session_state.generated_blocks_for_download = final_output_blocks_converted
+                        
+                        if final_output_blocks_converted:
+                            st.success(f"Generated {len(final_output_blocks_converted)} blocks for download in '{selected_output_unit}'.")
+                            
+                            # Optional: Display a small histogram of the generated blocks (in their final unit)
+                            fig_gen, ax_gen = plt.subplots(figsize=(8, 4))
+                            ax_gen.hist(final_output_blocks_converted, bins='auto', color='lightcoral', edgecolor='black')
+                            ax_gen.set_title(f"Histogram of Generated Blocks ({len(final_output_blocks_converted)} blocks)")
+                            ax_gen.set_xlabel(selected_output_unit)
+                            ax_gen.set_ylabel("Frequency")
+                            st.pyplot(fig_gen)
+                            plt.close(fig_gen)
+                        else:
+                            st.warning("No blocks generated within the specified min/max range after unit conversion. Adjust parameters.")
+                            st.session_state.generated_blocks_for_download = []
+                            st.session_state.output_unit_for_download = None
+                    else:
+                        st.warning("No blocks generated within the specified min/max range. Try adjusting the range or increase the 'Number of blocks to generate'.")
+                        st.session_state.generated_blocks_for_download = []
+                        st.session_state.output_unit_for_download = None
+        else: # generation_possible_overall is False (due to min/max error or density error)
+            st.info("Adjust input values or ensure selected distribution parameters are available for generation.")
+
+
+    # 4. Download Button (only display if blocks were successfully generated)
+    if 'generated_blocks_for_download' in st.session_state and st.session_state.generated_blocks_for_download and st.session_state.output_unit_for_download:
+        
+        # Format the blocks as a string, each on a new line
+        # Use different precision for mass (t) vs axis/volume (m/m3)
+        if st.session_state.output_unit_for_download == 't': 
+             output_string = "\n".join(f"{x:.3f}" for x in st.session_state.generated_blocks_for_download) # 3 decimal places for mass
+             file_name = f"{selected_download_distribution}_filtered_mass_t.txt"
+        else: # 'm' or 'm3'
+             output_string = "\n".join(f"{x:.2f}" for x in st.session_state.generated_blocks_for_download) # 2 decimal places for m or m3
+             file_name = f"{selected_download_distribution}_filtered_{st.session_state.output_unit_for_download}.txt"
+
+        st.download_button(
+            label=f"Download Generated Block List ({st.session_state.output_unit_for_download.upper()})",
+            data=output_string,
+            file_name=file_name,
+            mime="text/plain",
+            help=f"Download the list of generated block values in {st.session_state.output_unit_for_download.upper()}."
+        )
