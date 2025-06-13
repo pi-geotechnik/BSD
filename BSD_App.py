@@ -251,7 +251,7 @@ with st.sidebar:
         st.session_state.volumes_m3 = None
         st.session_state.uploaded_file = None # Clear uploaded file
         st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
-        st.experimental_rerun() # Rerun to clear plots immediately
+        st.rerun() # Rerun to clear plots immediately
 
     # Density input only if mass is selected
     density_input = None
