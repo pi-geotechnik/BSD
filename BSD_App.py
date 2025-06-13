@@ -411,7 +411,7 @@ with st.sidebar:
     st.write("If you find this application useful, consider supporting its development!")
 
     # Dein tatsächlicher Spenden-Link hier einfügen
-    DONATION_LINK = buymeacoffee.com/ztilleditsz 
+    DONATION_LINK = 'buymeacoffee.com/ztilleditsz'
 
     st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
     # Oder für PayPal:
