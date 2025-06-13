@@ -271,8 +271,15 @@ with st.sidebar:
         st.session_state.einheit = selected_unit
         # Clear all data if unit changes, forcing re-upload
         clear_all_data()
+        # Set a flag to show the warning message
+        st.session_state.show_unit_change_warning = True
+        #st.rerun()
+
+    # Show warning message if unit was changed
+    if st.session_state.get('show_unit_change_warning', False):
         st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
-        st.rerun()
+        # Clear the flag after showing the message
+        st.session_state.show_unit_change_warning = False
 
     # Density input only if mass is selected
     density_input = None
