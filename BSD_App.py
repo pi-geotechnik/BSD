@@ -563,7 +563,7 @@ else:
 
         # 2. Min/Max Block Axis Input (for block axis [m])
         st.markdown("Set the minimum and maximum **block axis** values for the generated distribution (values outside this range will be excluded).")
-        st.info("Note: the default min. value of 30 cm block axis corresponds to a volume of 0.027 m³; the default max. value of 1.5 m block axis corresponds to a volume of 3.375 m³ (expert opinion required!)")
+        st.info("Note: the default min. value of 30 cm block axis corresponds to a volume of 0.027 m³; the default max. value of 1.5 m block axis corresponds to a volume of 3.375 m³ --- **Expert Opinion required!** ---")
         col_min_max_1, col_min_max_2 = st.columns(2)
         with col_min_max_1:
             min_block_axis = st.number_input(
