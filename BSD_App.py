@@ -303,9 +303,19 @@ with st.sidebar:
             )
             st.session_state.m_achsen = m_axes
             st.session_state.volumes_m3 = volumes_m3
-            st.success("Your file was processed successfully.")
-            # Force rerun to update main content area with processed data
-            st.rerun()
+            
+            # --- DEBUGGING OUTPUT ---
+            st.write(f"DEBUG: m_axes after user upload: {m_axes[:5]}...") # Show first 5 elements
+            st.write(f"DEBUG: session_state.m_achsen after user upload: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
+            # --- END DEBUGGING OUTPUT ---
+            
+            if m_axes is not None: # Check if data processing was successful
+                st.success("Your file was processed successfully.")
+                # Force rerun to update main content area with processed data
+                st.rerun()
+            else:
+                st.error("File could not be processed. Please check the format and decimal separator (use '.' instead of ',').")
+                # Do not rerun if processing failed, to keep error message visible
     elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
         # If a file was loaded (e.g., example) but then unit changed and m_achsen cleared, re-process if possible
         # This handles the case where unit changes and an example file is already "loaded"
@@ -317,7 +327,15 @@ with st.sidebar:
         )
         st.session_state.m_achsen = m_axes
         st.session_state.volumes_m3 = volumes_m3
+        
+        # --- DEBUGGING OUTPUT ---
+        st.write(f"DEBUG: m_axes after re-processing: {m_axes[:5]}...") # Show first 5 elements
+        st.write(f"DEBUG: session_state.m_achsen after re-processing: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
+        # --- END DEBUGGING OUTPUT ---
 
+        if m_axes is not None: # Only rerun if re-processing was successful
+            st.rerun() # Added rerun here to update UI after re-processing
+            
 # --- Main Content Area ---
 if st.session_state.m_achsen is None:
     st.info("Please select a unit and load an example file or upload your own file to get started.")
