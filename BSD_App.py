@@ -296,9 +296,9 @@ with st.sidebar:
     # Density input only if mass is selected
     density_input = None
     if selected_unit == "Mass in t (density required)":
-        density_input = st.number_input("Enter the density in kg/m³:", min_value=1, value=2650, step=10)
+        density_input = st.number_input("Enter the density in kg/m³:", min_value=250, value=2650, step=50)
         if density_input <= 0:
-            st.error("Density must be greater than 0.")
+            st.error("Density must be equal to or greater than 250 kg/m³.")
             density_input = None
 
     st.subheader("Load Example Files")
@@ -580,7 +580,7 @@ else:
                 "Density for mass calculation (kg/m³):", 
                 min_value=250, 
                 value=2650, 
-                step=10, 
+                step=50, 
                 key="download_density_input"
             )
             if download_density_kg_m3 <= 0:
@@ -663,12 +663,12 @@ else:
     if 'generated_blocks_for_download' in st.session_state and st.session_state.generated_blocks_for_download and st.session_state.output_unit_for_download:
         
         # Format the blocks as a string, each on a new line
-        # Use different precision for mass (t) vs axis/volume (m/m3)
-        if st.session_state.output_unit_for_download == 't': 
-             output_string = "\n".join(f"{x:.3f}" for x in st.session_state.generated_blocks_for_download) # 3 decimal places for mass
-             file_name = f"{selected_download_distribution}_filtered_mass_t.txt"
-        else: # 'm' or 'm3'
-             output_string = "\n".join(f"{x:.2f}" for x in st.session_state.generated_blocks_for_download) # 2 decimal places for m or m3
+        # Use different precision for axis (m) vs mass/volume (t/m3)
+        if st.session_state.output_unit_for_download == 'm': 
+             output_string = "\n".join(f"{x:.3f}" for x in st.session_state.generated_blocks_for_download) # 3 decimal places for m
+             file_name = f"{selected_download_distribution}_filtered_axis_m.txt"
+        else: # 't' or 'm3'
+             output_string = "\n".join(f"{x:.6f}" for x in st.session_state.generated_blocks_for_download) # 6 decimal places for t or m3
              file_name = f"{selected_download_distribution}_filtered_{st.session_state.output_unit_for_download}.txt"
 
         st.download_button(
