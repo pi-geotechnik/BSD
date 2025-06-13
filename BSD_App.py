@@ -270,16 +270,14 @@ with st.sidebar:
     if st.session_state.einheit != selected_unit:
         st.session_state.einheit = selected_unit
         # Clear all data if unit changes, forcing re-upload
-        clear_all_data()
-        # Set a flag to show the warning message
-        st.session_state.show_unit_change_warning = True
-        #st.rerun()
-
-    # Show warning message if unit was changed
-    if st.session_state.get('show_unit_change_warning', False):
-       st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
-       # Clear the flag after showing the message
-       st.session_state.show_unit_change_warning = False
+        st.session_state.m_achsen = None
+        st.session_state.volumes_m3 = None
+        st.session_state.uploaded_file_content = None 
+        st.session_state.uploaded_filename = None 
+        st.session_state.last_error_message = None # Auch Fehlermeldung löschen bei Einheitswechsel
+        st.session_state.file_source = None # Hinzugefügt: file_source löschen bei Einheitswechsel
+        st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
+        st.rerun() # Rerun to clear plots immediately
 
     # Density input only if mass is selected
     density_input = None
