@@ -34,7 +34,7 @@ st.markdown("""
     <style>
     /* Reduziert die Schriftgröße des Textes in st.info Boxen */
     div[data-testid="stInfo"] p {
-        font-size: 0.75em; /* Passt die Größe an. 1em ist die Standardtextgröße (wie Selectbox). 0.95em macht es leicht kleiner. */
+        font-size: smaller; /* Passt die Größe an. 1em ist die Standardtextgröße (wie Selectbox). 0.95em macht es leicht kleiner. */
                           /* Du kannst auch 'smaller' oder einen spezifischen Pixelwert wie '14px' verwenden. */
     }
     /* Optional: Wenn du auch die Schriftgröße von st.subheader ändern möchtest, kommentiere dies aus und passe es an */
