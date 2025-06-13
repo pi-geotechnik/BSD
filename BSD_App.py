@@ -240,6 +240,10 @@ with st.sidebar:
         st.session_state.m_achsen = None
     if 'volumes_m3' not in st.session_state:
         st.session_state.volumes_m3 = None
+    if 'uploaded_file_content' not in st.session_state: # Initialisierung hinzufügen
+        st.session_state.uploaded_file_content = None
+    if 'uploaded_filename' not in st.session_state: # Initialisierung hinzufügen
+        st.session_state.uploaded_filename = None
 
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
@@ -247,11 +251,11 @@ with st.sidebar:
     # Check if the unit has changed
     if st.session_state.einheit != selected_unit:
         st.session_state.einheit = selected_unit
-        # Clear data if unit changes, forcing re-upload
+        # Clear all data if unit changes, forcing re-upload
         st.session_state.m_achsen = None
         st.session_state.volumes_m3 = None
-        st.session_state.uploaded_file_content = None # Clear loaded file content
-        st.session_state.uploaded_filename = None # Clear loaded filename
+        st.session_state.uploaded_file_content = None 
+        st.session_state.uploaded_filename = None 
         st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
         st.rerun() # Rerun to clear plots immediately
 
@@ -267,6 +271,12 @@ with st.sidebar:
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             with st.spinner(f"Loading '{name}'..."):
+                # Clear existing user/example file state before loading new example
+                st.session_state.uploaded_file_content = None 
+                st.session_state.uploaded_filename = None
+                st.session_state.m_achsen = None
+                st.session_state.volumes_m3 = None
+
                 response = requests.get(url)
                 if response.status_code == 200:
                     example_file_content = response.content
@@ -287,16 +297,26 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
+                    # Clear session state if example load failed
+                    st.session_state.uploaded_file_content = None
+                    st.session_state.uploaded_filename = None
+                    st.session_state.m_achsen = None
+                    st.session_state.volumes_m3 = None
+                    # No rerun here, let the error message stay
+                    
 
     st.subheader("Upload Your Own File")
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
     
     if uploaded_user_file is not None:
+        # Clear ALL data-related session state *before* processing new user file
+        st.session_state.uploaded_file_content = None
+        st.session_state.uploaded_filename = None
+        st.session_state.m_achsen = None 
+        st.session_state.volumes_m3 = None
+        
         with st.spinner("Processing uploaded file..."):
             file_content = uploaded_user_file.read().decode("utf-8")
-            # Temporär Dateiname und Inhalt setzen - wird bei Verarbeitungsfehler zurückgesetzt
-            st.session_state.uploaded_file_content = file_content
-            st.session_state.uploaded_filename = uploaded_user_file.name
             
             m_axes, volumes_m3 = process_uploaded_data(
                 file_content,
@@ -304,19 +324,17 @@ with st.sidebar:
                 density_input
             )
             
-            if m_axes is not None: # Verarbeitung erfolgreich
+            if m_axes is not None: # Processing successful
+                st.session_state.uploaded_file_content = file_content # Set content only on success
+                st.session_state.uploaded_filename = uploaded_user_file.name # Set filename only on success
                 st.session_state.m_achsen = m_axes
                 st.session_state.volumes_m3 = volumes_m3
                 st.success("Your file was processed successfully.")
                 st.rerun()
-            else: # Verarbeitung fehlgeschlagen
+            else: # Processing failed
                 st.error("File could not be processed. Please check the format and decimal separator (use '.' instead of ',').")
-                # Zustand zurücksetzen, wenn die Verarbeitung fehlschlägt
-                st.session_state.uploaded_file_content = None
-                st.session_state.uploaded_filename = None
-                st.session_state.m_achsen = None # Sicherstellen, dass m_achsen None ist
-                st.session_state.volumes_m3 = None # Sicherstellen, dass volumes_m3 None ist
-                # Kein rerun hier, damit die Fehlermeldung sichtbar bleibt
+                # No need to clear state here, it was already cleared at the beginning of the block.
+                # No rerun here, so the error message remains visible.
 
     # Dieser elif-Block ist wichtig, falls die Einheit geändert wird, nachdem eine Datei geladen wurde.
     # Er prüft, ob Inhalte in der Session vorhanden sind, aber noch nicht verarbeitet wurden (m_achsen ist None).
