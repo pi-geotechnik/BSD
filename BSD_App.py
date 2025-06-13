@@ -542,8 +542,8 @@ else:
                 step=0.05, 
                 format="%.2f", 
                 key="min_block_axis_input_download"
+                st.info("Note: the default min. value of 10 cm axis corresponds to a volume of 0.001 m³")
             )
-        st.info("Note: the default min. value of 10 cm axis corresponds to a volume of 0.001 m³")
         with col_min_max_2:
             max_block_axis = st.number_input(
                 "Maximum Block Axis [m]", 
@@ -552,9 +552,9 @@ else:
                 step=0.05, 
                 format="%.2f", 
                 key="max_block_axis_input_download"
+                st.info("Note: the default max. value of 1.5 m axis corresponds to a volume of 3.375 m³")
             )
-        st.info("Note: the default max. value of 1.5 m axis corresponds to a volume of 3.375 m³")
-
+        
         if min_block_axis >= max_block_axis:
             st.error("Minimum block axis must be less than maximum block axis.")
             generation_possible_overall = False # Disable generation if range is invalid
