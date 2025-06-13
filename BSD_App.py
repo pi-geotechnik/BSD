@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # --------------------------------------------------------------
-# BVG ...  a block size distribution code and app by Mariella Illeditsch
+# BVG ... a block size distribution code and app by Mariella Illeditsch
 # App for visualising a block size distribution and fitting a probability function
 # --------------------------------------------------------------
 #
@@ -10,7 +10,6 @@
 #
 # --------------------------------------------------------------
 
-
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,68 +18,74 @@ import requests
 import io
 from io import BytesIO
 from scipy import stats
-from PIL import Image # für das Logo
+from PIL import Image
 
-# Funktion zur Berechnung der Masse in Tonnen aus m³ und Dichte
-def berechne_masse_in_tonnen(volumen_m3, dichte_kg_m3):
-    return (volumen_m3 * dichte_kg_m3) / 1000
+# --- Konfiguration und Konstanten ---
+# Set page configuration
+st.set_page_config(
+    page_title="BSD Block Size Distribution by curve fitting",
+    page_icon="🪨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Funktion zur Berechnung der dritten Wurzel von m³
-def berechne_dritte_wurzel(v):
+# Pfad zum Logo
+LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
+
+# Beispiel-Datei URLs auf GitHub
+EXAMPLE_FILES = {
+    #"Kalk": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_dachsteinkalk_m3.txt", # Auskommentiert, da nicht in der Original-App verwendet
+    "Rauwacke": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_mils_rauwacke_m3.txt",
+    "Orthogneiss": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_rossatz_orthogneis_m3.txt",
+    "Slate": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_vals_schiefer_m3.txt"
+}
+
+# --- Hilfsfunktionen ---
+
+def calculate_mass_in_tonnes(volume_m3, density_kg_m3):
+    """Calculates mass in tonnes from volume in m³ and density in kg/m³."""
+    return (volume_m3 * density_kg_m3) / 1000
+
+def calculate_cubic_root(v):
+    """Calculates the cubic root of a volume (m³) to get block axis (m)."""
     return round(v ** (1/3), 2)
 
-# Funktion zur Visualisierung von Histogrammen
-def visualisiere_histogramm_m3_und_m(m_werte, m3_werte):
+def visualize_histograms_m3_and_m(m_values, m3_values):
+    """Visualizes histograms for block volumes (m³) and block axes (m)."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-    ax1.hist(m3_werte, bins=20, color='lightgreen', edgecolor='black')
+    ax1.hist(m3_values, bins=20, color='lightgreen', edgecolor='black')
     ax1.set_title("Histogram of the block volumes (m³)")
     ax1.set_xlabel("Block volume [m³]")
     ax1.set_ylabel("Frequency")
     
-    ax2.hist(m_werte, bins=20, color='skyblue', edgecolor='black')
+    ax2.hist(m_values, bins=20, color='skyblue', edgecolor='black')
     ax2.set_title("Histogram of the block axes [m]")
     ax2.set_xlabel("Block axis [m]")
     ax2.set_ylabel("Frequency")
     
     plt.tight_layout()
-    st.pyplot(fig)
+    return fig
 
-# Funktion zur Berechnung der Perzentile
-def berechne_perzentile(Achsen, perzentile):
-    return np.percentile(Achsen, perzentile)
-    
-# Funktion zur Berechnung der Perzentile und Visualisierung
-def berechne_perzentile_und_visualisierung(m_achsen):
+def calculate_and_visualize_percentiles(m_axes):
+    """
+    Calculates percentiles and visualizes the probability density (PDF)
+    and cumulative distribution function (CDF) on normal and log scales.
+    """
     steps = np.linspace(0.01, 1.00, num=100)
+    percentiles_m_axes = np.quantile(m_axes, steps)
 
-    Perc_steps = ['0','5','10','15','20','25','30','35','40','45','50','55','60','65','70','75','80','85','90','95','96','97','98','99','100']
-
-    # Berechnung der Perzentile
-    percentiles_m_achsen = np.quantile(m_achsen, steps)
-    Perc_m_achsen = percentiles_m_achsen[0], percentiles_m_achsen[4], percentiles_m_achsen[9], \
-                        percentiles_m_achsen[14], percentiles_m_achsen[19], percentiles_m_achsen[24], \
-                        percentiles_m_achsen[29], percentiles_m_achsen[34], percentiles_m_achsen[39], \
-                        percentiles_m_achsen[44], percentiles_m_achsen[49], percentiles_m_achsen[54], \
-                        percentiles_m_achsen[59], percentiles_m_achsen[64], percentiles_m_achsen[69], \
-                        percentiles_m_achsen[74], percentiles_m_achsen[79], percentiles_m_achsen[84], \
-                        percentiles_m_achsen[89], percentiles_m_achsen[94], percentiles_m_achsen[95], \
-                        percentiles_m_achsen[96], percentiles_m_achsen[97], percentiles_m_achsen[98], \
-                        percentiles_m_achsen[99]
-
-
-    # Visualisierung der Ergebnisse
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
 
-    # Histogramm der Probability density
-    ax1.hist(m_achsen, density=True, bins='auto', histtype='stepfilled', color='tab:blue', alpha=0.3, label='upload pdf')
+    # Histogram of the Probability density
+    ax1.hist(m_axes, density=True, bins='auto', histtype='stepfilled', color='tab:blue', alpha=0.3, label='upload pdf')
     
-    # CDF auf normaler Skala
-    ax2.plot(percentiles_m_achsen, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
+    # CDF on normal scale
+    ax2.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
     
-    # CDF auf Log-Skala
-    ax3.plot(percentiles_m_achsen, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
+    # CDF on Log-scale
+    ax3.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
 
-    # Achsenbeschriftungen
+    # Axis labels
     ax1.set_xlim(left=None, right=None)
     ax1.set_xlabel('Block axis a [m]', fontsize=14)
     ax1.set_ylabel('Probability density f(a)', fontsize=14)
@@ -93,84 +98,74 @@ def berechne_perzentile_und_visualisierung(m_achsen):
     ax3.set_xlabel('Block axis a [m] (log)', fontsize=14)
     ax3.set_ylabel('Cumulative probability F(a)', fontsize=14)
 
-    # Legenden
+    # Legends
     ax1.legend(loc='best', frameon=False)
     ax2.legend(loc='best', frameon=False)
     ax3.legend(loc='best', frameon=False)
-
-    # Diagramm übergeben
-    return(fig)
     
-# Funktion zur Anpassung der Verteilungen und Visualisierung
-def passe_verteilungen_an_und_visualisiere(m_achsen, ausgewählte_verteilungen):
+    plt.tight_layout()
+    return fig
+    
+def fit_distributions_and_visualize(m_axes, selected_distributions):
+    """
+    Fits selected probability distributions to the data and visualizes their
+    PDFs and CDFs against the uploaded data.
+    """
     fig, (ax4, ax5) = plt.subplots(nrows=1, ncols=2, figsize=(12, 4))
 
-    # Histogramm der m_achsen
-    ax4.hist(m_achsen, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3, 
+    # Histogram of m_axes
+    ax4.hist(m_axes, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3, 
              label='upload pdf')
         
-    # CDF für m_achsen (kumulative Verteilung)
+    # CDF for m_axes (cumulative distribution)
     steps = np.linspace(0.01, 1.00, num=100)
-    percentiles_m_achsen = np.quantile(m_achsen, steps)
-    ax5.plot(percentiles_m_achsen, steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload cdf')
+    percentiles_m_axes = np.quantile(m_axes, steps)
+    ax5.plot(percentiles_m_axes, steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload cdf')
     
-    # Kumulative Verteilungen und CDF Berechnungen
-        
-    if 'expon' in ausgewählte_verteilungen:
-        loc3, scale3 = stats.expon.fit(m_achsen)
+    # Cumulative Distributions and CDF Calculations
+    if 'expon' in selected_distributions:
+        loc3, scale3 = stats.expon.fit(m_axes)
         X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), 
-                         stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_achsen))
+                         stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
         ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
         ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
         
-        # Speichern der Parameter in session_state
+        # Save parameters to session_state
         st.session_state.loc3 = loc3
         st.session_state.scale3 = scale3
 
-    if 'genexpon' in ausgewählte_verteilungen:
-        a1, b1, c1, loc1, scale1 = stats.genexpon.fit(m_achsen)
+    if 'genexpon' in selected_distributions:
+        a1, b1, c1, loc1, scale1 = stats.genexpon.fit(m_axes)
         X1 = np.linspace(stats.genexpon.ppf(0.001, a1, b1, c1, loc=loc1, scale=scale1), 
-                         stats.genexpon.ppf(0.999, a1, b1, c1, loc=loc1, scale=scale1), len(m_achsen))
+                         stats.genexpon.ppf(0.999, a1, b1, c1, loc=loc1, scale=scale1), len(m_axes))
         ax4.plot(X1, stats.genexpon.pdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon pdf')
         ax5.plot(X1, stats.genexpon.cdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon cdf')
 
-        # Speichern der Parameter in session_state
+        # Save parameters to session_state
         st.session_state.a1 = a1
         st.session_state.b1 = b1
         st.session_state.c1 = c1
         st.session_state.loc1 = loc1
         st.session_state.scale1 = scale1
                 
-    #if 'lognorm' in ausgewählte_verteilungen:
-    #    shape2, loc2, scale2 = stats.lognorm.fit(m_achsen, floc=0)
-    #    X2 = np.linspace(stats.lognorm.ppf(0.001, shape2, loc=loc2, scale=scale2), 
-    #                     stats.lognorm.ppf(0.999, shape2, loc=loc2, scale=scale2), len(m_achsen))
-    #    ax4.plot(X2, stats.lognorm.pdf(X2, shape2, loc=loc2, scale=scale2), '#00008B', lw=1.0, alpha=0.7, label='lognorm pdf')
-    #    ax5.plot(X2, stats.lognorm.cdf(X2, shape2, loc=loc2, scale=scale2), '#00008B', lw=1.0, alpha=0.7, label='lognorm cdf')
-
-        # Speichern der Parameter in session_state
-    #    st.session_state.shape2 = shape2
-    #    st.session_state.loc2 = loc2
-    #    st.session_state.scale2 = scale2
-        
-    if 'powerlaw' in ausgewählte_verteilungen:
-        a4, loc4, scale4 = stats.powerlaw.fit(m_achsen)
+    if 'powerlaw' in selected_distributions:
+        a4, loc4, scale4 = stats.powerlaw.fit(m_axes)
         X4 = np.linspace(stats.powerlaw.ppf(0.001, a4, loc=loc4, scale=scale4), 
-                         stats.powerlaw.ppf(0.999, a4, loc=loc4, scale=scale4), len(m_achsen))
+                         stats.powerlaw.ppf(0.999, a4, loc=loc4, scale=scale4), len(m_axes))
         ax4.plot(X4, stats.powerlaw.pdf(X4, a4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='powerlaw pdf')
         ax5.plot(X4, stats.powerlaw.cdf(X4, a4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='powerlaw cdf')
 
-        # Speichern der Parameter in session_state
+        # Save parameters to session_state
         st.session_state.a4 = a4
         st.session_state.loc4 = loc4
         st.session_state.scale4 = scale4
     
-    # Berechne das Histogramm (counts und bins)
-    counts, bins = np.histogram(m_achsen, bins='auto', density=True)
-        # Finde den maximalen Wert des Histogramms
+    # Calculate histogram (counts and bins)
+    counts, bins = np.histogram(m_axes, bins='auto', density=True)
+    # Find the maximum value of the histogram
     max_y_value = max(counts)
 
-    # Achsen für das Diagramm
+    # Axes for the plot
     ax4.legend(loc='best', frameon=False)
     ax4.set_ylim(0, max_y_value * 1.1)
     ax4.set_xlabel('Block axis a [m]', fontsize=12)
@@ -181,28 +176,51 @@ def passe_verteilungen_an_und_visualisiere(m_achsen, ausgewählte_verteilungen):
     ax5.set_xlabel('Block axis a [m] (log)', fontsize=12)
     ax5.set_ylabel('Cumulative probability F(a)', fontsize=12)
     
-    # Parameter und Diagramm übergeben
+    plt.tight_layout()
     return fig
     
-# Function to calculate percentiles for a distribution
-def calculate_percentiles(distribution, percentiles, *params):
+def calculate_distribution_percentiles(distribution, percentiles, *params):
+    """Calculates percentiles for a given distribution and its parameters."""
     return [distribution.ppf(p / 100, *params) for p in percentiles]
 
-# Streamlit App
+def process_uploaded_data(file_content, unit_type, density_kg_m3=None):
+    """Processes uploaded file content, converts units, and calculates m_achsen."""
+    try:
+        # Replace commas with dots for decimal separator and filter out empty lines or non-numeric values
+        values_list = [
+            float(val.strip().replace(',', '.')) 
+            for val in file_content.splitlines() 
+            if val.strip().replace(',', '.', 1).replace('.', '', 1).isdigit() or (val.strip().replace(',', '.', 1).startswith('-') and val.strip().replace(',', '.', 1)[1:].replace('.', '', 1).isdigit())
+        ]
+        
+        # Filter values to be non-negative
+        values = [wert for wert in values_list if wert >= 0.000]
+        
+        # Sort values in ascending order
+        values.sort()
+        
+        st.write(f"Number of blocks: {len(values)}")
+        
+        if unit_type == "Volume in m³":
+            m_axes = [calculate_cubic_root(val) for val in values]
+            volumes_m3 = values
+        elif unit_type == "Mass in t (density required)":
+            if density_kg_m3 is None:
+                st.error("Density is required for mass input.")
+                return None, None
+            volumes_m3 = [val * 1000 / density_kg_m3 for val in values]
+            m_axes = [calculate_cubic_root(val) for val in volumes_m3]
+        
+        return m_axes, volumes_m3
+    except Exception as e:
+        st.error(f"Error processing data: {e}. Please ensure numbers use a dot '.' as a decimal separator.")
+        return None, None
 
-# Set page configuration
-st.set_page_config(
-    page_title="BSD Block Size Distribution by curve fitting",
-    page_icon="🪨",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- Streamlit App Layout ---
 
-# Zeige das Logo zu Beginn der App
-logo = Image.open("pi-geotechnik-1-RGB-192-30-65.png")  # Lade das Bild
-st.image(logo, caption="https://pi-geo.at/", width=300)  # Zeige das Logo an
-
-st.title("Blockgrößenverteilung")
+# Header and Info
+st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
+st.title("Block Size Distribution")
 st.markdown("""
     *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH*
     
@@ -211,382 +229,168 @@ st.markdown("""
     This application visualizes block size distributions, fits distribution functions to them and (coming soon) returns blocklists of the fitted distribution for rockfall simulation (with THROW).
 """)
 
-# URL der Beispiel-Datei auf GitHub
-#example_file_1_url = "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_dachsteinkalk_m3.txt"
-example_file_3_url = "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_mils_rauwacke_m3.txt" 
-example_file_4_url = "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_rossatz_orthogneis_m3.txt" 
-example_file_5_url = "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_vals_schiefer_m3.txt" 
+# --- Sidebar for user input ---
+with st.sidebar:
+    st.header("Input Data")
 
-# Auswahl der Einheit
-einheit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
+    # Initialize session state variables if they don't exist
+    if 'einheit' not in st.session_state:
+        st.session_state.einheit = "Volume in m³"
+    if 'm_achsen' not in st.session_state:
+        st.session_state.m_achsen = None
+    if 'volumes_m3' not in st.session_state:
+        st.session_state.volumes_m3 = None
 
-# Überprüfen, ob sich die Einheit geändert hat
-if 'einheit' in st.session_state and st.session_state.einheit != einheit:
-    # Löschen von m_achsen, falls es bereits existiert
-    if 'm_achsen' in st.session_state:
-        del st.session_state['m_achsen']
-    # Löschen von vorhandenen Figuren, falls sie im session_state existieren
-    if 'fig1' in st.session_state:
-        del st.session_state['fig1']
-    if 'fig2' in st.session_state:
-        del st.session_state['fig2']
-    # Optional: Anzeige einer Nachricht, dass m_achsen gelöscht wurde
-    st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
+    selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
+
+    # Check if the unit has changed
+    if st.session_state.einheit != selected_unit:
+        st.session_state.einheit = selected_unit
+        # Clear data if unit changes, forcing re-upload
+        st.session_state.m_achsen = None
+        st.session_state.volumes_m3 = None
+        st.session_state.uploaded_file = None # Clear uploaded file
+        st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
+        st.experimental_rerun() # Rerun to clear plots immediately
+
+    # Density input only if mass is selected
+    density_input = None
+    if selected_unit == "Mass in t (density required)":
+        density_input = st.number_input("Enter the density in kg/m³:", min_value=1, value=2650, step=10)
+        if density_input <= 0:
+            st.error("Density must be greater than 0.")
+            density_input = None # Prevent processing with invalid density
+
+    st.subheader("Load Example Files")
+    for name, url in EXAMPLE_FILES.items():
+        if st.button(f"Load sample file '{name}'"):
+            with st.spinner(f"Loading '{name}'..."):
+                response = requests.get(url)
+                if response.status_code == 200:
+                    example_file_content = response.content
+                    # Simulate file upload for consistent processing
+                    st.session_state.uploaded_file_content = example_file_content.decode("utf-8")
+                    st.session_state.uploaded_filename = f"sample_{name}.txt"
+                    
+                    # Process the data
+                    m_axes, volumes_m3 = process_uploaded_data(
+                        st.session_state.uploaded_file_content,
+                        selected_unit,
+                        density_input
+                    )
+                    st.session_state.m_achsen = m_axes
+                    st.session_state.volumes_m3 = volumes_m3
+
+                    st.success(f"The sample file '{name}' was loaded successfully.")
+                    # Force rerun to update main content area with processed data
+                    st.experimental_rerun()
+                else:
+                    st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
+
+    st.subheader("Upload Your Own File")
+    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
     
-# Speichern der Auswahl im session_state
-st.session_state.einheit = einheit  # Speichert die ausgewählte Einheit
+    if uploaded_user_file is not None:
+        with st.spinner("Processing uploaded file..."):
+            file_content = uploaded_user_file.read().decode("utf-8")
+            st.session_state.uploaded_file_content = file_content
+            st.session_state.uploaded_filename = uploaded_user_file.name
+            
+            m_axes, volumes_m3 = process_uploaded_data(
+                file_content,
+                selected_unit,
+                density_input
+            )
+            st.session_state.m_achsen = m_axes
+            st.session_state.volumes_m3 = volumes_m3
+            st.success("Your file was processed successfully.")
+            # Force rerun to update main content area with processed data
+            st.experimental_rerun()
+    elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
+        # If a file was loaded (e.g., example) but then unit changed and m_achsen cleared, re-process if possible
+        # This handles the case where unit changes and an example file is already "loaded"
+        st.info("File needs to be re-processed due to unit change or initial load.")
+        m_axes, volumes_m3 = process_uploaded_data(
+            st.session_state.uploaded_file_content,
+            selected_unit,
+            density_input
+        )
+        st.session_state.m_achsen = m_axes
+        st.session_state.volumes_m3 = volumes_m3
 
+# --- Main Content Area ---
+if st.session_state.m_achsen is None:
+    st.info("Please select a unit and load an example file or upload your own file to get started.")
+else:
+    # Display file content if available
+    if 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content:
+        st.subheader(f"Contents of {st.session_state.uploaded_filename}:")
+        st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
 
-if einheit == "Volumen in m³":
-#    # Button für die Auswahl der Beispiel-Datei 1 Kalk
-#    if st.button("Load example file 'Kalk'"):
-#        # Beispiel-Datei aus GitHub laden
-#        response = requests.get(example_file_1_url)
-#        
-#        if response.status_code == 200:
-#            # Erstelle ein 'BytesIO'-Objekt aus der heruntergeladenen Datei, um sie wie eine hochgeladene Datei zu behandeln
-#            example_file_content = response.content
-#            uploaded_file = io.BytesIO(example_file_content)  # Dies ist die "hochgeladene" Beispiel-Datei
-#            
-#            # Speichern der Datei im session_state
-#            st.session_state.uploaded_file = uploaded_file
-#            #st.write(st.session_state.uploaded_file)
-#            
-#            # Zeige die erfolgreiche Meldung an
-#            st.success("The example file 'Kalk' was loaded successfully.")
-#            
-#            # Verarbeite die Datei, als ob sie über den file_uploader hochgeladen wurde
-#            file_content = uploaded_file.read().decode("utf-8")  # Beispiel: als Textdatei lesen
-#            st.text_area("Contents of the file:", file_content, height=200)  # Zeige den Contents of the file als Text an
-#            
-#            try:
-#                # Text in Zahlen (m³) umwandeln
-#                werte_liste = [float(val.strip()) for val in file_content.splitlines() if val.strip().replace(".", "", 1).isdigit()]
-#                
-#                # Filtere nur Werte mit genau drei Dezimalstellen und entferne 0.00-Werte
-#                werte = [wert for wert in werte_liste if wert >= 0.000]
-#                
-#                # Sortieren der Werte in aufsteigender Reihenfolge
-#                werte.sort()
-#                
-#                # Anzahl der Werte ausgeben
-#                st.write(f"Number of blocks: {len(werte)}")
-#                
-#                # Berechnung der dritten Wurzel (Achsen in Metern)
-#                m_achsen = [berechne_dritte_wurzel(val) for val in werte]
-#                
-#                # Speichern von m_achsen in session_state für spätere Verwendung
-#                st.session_state.m_achsen = m_achsen
-#                
-#            except Exception as e:
-#                st.error(f"Errors in the processing of data: {e}")
-#        
-#        else:
-#            st.error("Error loading the file.")
-   
-    # Button für die Auswahl der Beispiel-Datei 3 Rauwacke
-    if st.button("Load sample file 'Rauwacke'"):
-        # Beispiel-Datei aus GitHub laden
-        response = requests.get(example_file_3_url)
-        
-        if response.status_code == 200:
-            # Erstelle ein 'BytesIO'-Objekt aus der heruntergeladenen Datei, um sie wie eine hochgeladene Datei zu behandeln
-            example_file_content = response.content
-            uploaded_file = io.BytesIO(example_file_content)  # Dies ist die "hochgeladene" Beispiel-Datei
-            
-            # Speichern der Datei im session_state
-            st.session_state.uploaded_file = uploaded_file
-            #st.write(st.session_state.uploaded_file)
-            
-            # Zeige die erfolgreiche Meldung an
-            st.success("The sample file 'Rauwacke' was loaded successfully.")
-            
-            # Verarbeite die Datei, als ob sie über den file_uploader hochgeladen wurde
-            file_content = uploaded_file.read().decode("utf-8")  # Beispiel: als Textdatei lesen
-            st.text_area("Contents of the file:", file_content, height=200)  # Zeige den Contents of the file als Text an
-            
-            try:
-                # Text in Zahlen (m³) umwandeln
-                werte_liste = [float(val.strip()) for val in file_content.splitlines() if val.strip().replace(".", "", 1).isdigit()]
-                
-                # Filtere nur Werte mit genau drei Dezimalstellen und entferne 0.00-Werte
-                werte = [wert for wert in werte_liste if wert >= 0.000]
-                
-                # Sortieren der Werte in aufsteigender Reihenfolge
-                werte.sort()
-                
-                # Anzahl der Werte ausgeben
-                st.write(f"Number of blocks: {len(werte)}")
-                
-                # Berechnung der dritten Wurzel (Achsen in Metern)
-                m_achsen = [berechne_dritte_wurzel(val) for val in werte]
-                
-                # Speichern von m_achsen in session_state für spätere Verwendung
-                st.session_state.m_achsen = m_achsen
-                
-            except Exception as e:
-                st.error(f"Errors in the processing of data: {e}")
-        
-        else:
-            st.error("Error loading the file.")
+    st.subheader("Visualization of Probability Distribution")
+    fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen)
+    st.pyplot(fig1)
+
+    st.subheader("Fitting Probability Functions")
+    # Allow user to select distributions
+    # selected_dists = st.multiselect(
+    #     "Select distributions to fit:",
+    #     ['genexpon', 'expon', 'powerlaw'],
+    #     default=['genexpon', 'expon', 'powerlaw'] # All selected by default
+    # )
+    # For now, keep all distributions automatically calculated as per original code logic
+    selected_dists = ['genexpon', 'expon', 'powerlaw'] 
     
-    # Button für die Auswahl der Beispiel-Datei 4 Orthogneis
-    if st.button("Load example file 'Orthogneiss'"):
-        # Beispiel-Datei aus GitHub laden
-        response = requests.get(example_file_4_url)
-        
-        if response.status_code == 200:
-            # Erstelle ein 'BytesIO'-Objekt aus der heruntergeladenen Datei, um sie wie eine hochgeladene Datei zu behandeln
-            example_file_content = response.content
-            uploaded_file = io.BytesIO(example_file_content)  # Dies ist die "hochgeladene" Beispiel-Datei
-            
-            # Speichern der Datei im session_state
-            st.session_state.uploaded_file = uploaded_file
-            #st.write(st.session_state.uploaded_file)
-            
-            # Zeige die erfolgreiche Meldung an
-            st.success("The example file 'Orthogneis' was loaded successfully.")
-            
-            # Verarbeite die Datei, als ob sie über den file_uploader hochgeladen wurde
-            file_content = uploaded_file.read().decode("utf-8")  # Beispiel: als Textdatei lesen
-            st.text_area("Contents of the file:", file_content, height=200)  # Zeige den Contents of the file als Text an
-            
-            try:
-                # Text in Zahlen (m³) umwandeln
-                werte_liste = [float(val.strip()) for val in file_content.splitlines() if val.strip().replace(".", "", 1).isdigit()]
-                
-                # Filtere nur Werte mit genau drei Dezimalstellen und entferne 0.00-Werte
-                werte = [wert for wert in werte_liste if wert >= 0.000]
-                
-                # Sortieren der Werte in aufsteigender Reihenfolge
-                werte.sort()
-                
-                # Anzahl der Werte ausgeben
-                st.write(f"Number of blocks: {len(werte)}")
-                
-                # Berechnung der dritten Wurzel (Achsen in Metern)
-                m_achsen = [berechne_dritte_wurzel(val) for val in werte]
-                
-                # Speichern von m_achsen in session_state für spätere Verwendung
-                st.session_state.m_achsen = m_achsen
-                
-            except Exception as e:
-                st.error(f"Errors in the processing of data: {e}")
-        
-        else:
-            st.error("Error loading the file.")
-            
-    # Button für die Auswahl der Beispiel-Datei 5 Schiefer
-    if st.button("Load example file 'Slate'"):
-        # Beispiel-Datei aus GitHub laden
-        response = requests.get(example_file_5_url)
-        
-        if response.status_code == 200:
-            # Erstelle ein 'BytesIO'-Objekt aus der heruntergeladenen Datei, um sie wie eine hochgeladene Datei zu behandeln
-            example_file_content = response.content
-            uploaded_file = io.BytesIO(example_file_content)  # Dies ist die "hochgeladene" Beispiel-Datei
-            
-            # Speichern der Datei im session_state
-            st.session_state.uploaded_file = uploaded_file
-            #st.write(st.session_state.uploaded_file)
-            
-            # Zeige die erfolgreiche Meldung an
-            st.success("The example file 'Slate' was loaded successfully.")
-            
-            # Verarbeite die Datei, als ob sie über den file_uploader hochgeladen wurde
-            file_content = uploaded_file.read().decode("utf-8")  # Beispiel: als Textdatei lesen
-            st.text_area("Contents of the file:", file_content, height=200)  # Zeige den Contents of the file als Text an
-            
-            try:
-                # Text in Zahlen (m³) umwandeln
-                werte_liste = [float(val.strip()) for val in file_content.splitlines() if val.strip().replace(".", "", 1).isdigit()]
-                
-                # Filtere nur Werte mit genau drei Dezimalstellen und entferne 0.00-Werte
-                werte = [wert for wert in werte_liste if wert >= 0.000]
-                
-                # Sortieren der Werte in aufsteigender Reihenfolge
-                werte.sort()
-                
-                # Anzahl der Werte ausgeben
-                st.write(f"Number of blocks: {len(werte)}")
-                
-                # Berechnung der dritten Wurzel (Achsen in Metern)
-                m_achsen = [berechne_dritte_wurzel(val) for val in werte]
-                
-                # Speichern von m_achsen in session_state für spätere Verwendung
-                st.session_state.m_achsen = m_achsen
-                
-            except Exception as e:
-                st.error(f"Errors in the processing of data: {e}")
-        
-        else:
-            st.error("Error loading the file.")
+    fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists)
+    st.pyplot(fig2)
 
-    
-    # Falls der Benutzer eine Datei hochladen möchte
-    uploaded_file = st.file_uploader("Upload your own file with m³ values:", type=["txt"])
-    
-    if uploaded_file is not None:
-        # Speichern der hochgeladenen Datei im session_state
-        st.session_state.uploaded_file = uploaded_file
-        #st.write(st.session_state.uploaded_file)
-        st.write("This file must be deleted before you load a sample file.")
+    st.subheader("Tabular Comparison of Percentiles")
 
-        file_content = uploaded_file.read().decode("utf-8")
-        st.text_area("Contents of the file:", file_content, height=200)
-        
+    percentiles_to_show = [0, 25, 50, 75, 95, 96, 97, 98, 99, 100]
+
+    # Check if all required parameters for fitting are in session_state
+    # This ensures the table is only shown after distributions have been successfully fitted
+    required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4']
+    if all(param in st.session_state for param in required_params):
         try:
-            # Text in Zahlen (m³) umwandeln
-            werte_liste = [float(val.strip()) for val in file_content.splitlines() if val.strip().replace(".", "", 1).isdigit()]
+            # Calculate percentiles for each distribution
+            L1s = calculate_distribution_percentiles(stats.genexpon, percentiles_to_show, 
+                                                    st.session_state.a1, st.session_state.b1, st.session_state.c1, 
+                                                    st.session_state.loc1, st.session_state.scale1)
+            L3s = calculate_distribution_percentiles(stats.expon, percentiles_to_show, 
+                                                    st.session_state.loc3, st.session_state.scale3)
+            L4s = calculate_distribution_percentiles(stats.powerlaw, percentiles_to_show, 
+                                                    st.session_state.a4, st.session_state.loc4, st.session_state.scale4)
             
-            # Filtere nur Werte mit genau drei Dezimalstellen und entferne 0.00-Werte
-            werte = [wert for wert in werte_liste if wert >= 0.000]
-            
-            # Sortieren der Werte in aufsteigender Reihenfolge
-            werte.sort()
-            
-            # Anzahl der Werte ausgeben
-            st.write(f"Number of blocks: {len(werte)}")
-            
-            # Berechnung der dritten Wurzel (Achsen in Metern)
-            m_achsen = [berechne_dritte_wurzel(val) for val in werte]
-            
-            # Speichern von m_achsen in session_state für spätere Verwendung
-            st.session_state.m_achsen = m_achsen
-            
-        except Exception as e:
-            st.error(f"Errors in the processing of data: {e}")
-
-
-# Datei-Upload für Masse in t (Dichte erforderlich)
-if einheit == "Masse in t (Dichte erforderlich)":
-    uploaded_file = st.file_uploader("Eigene Datei mit t-Werten hochladen:", type=["txt"])
-    if uploaded_file is not None:
-        text = uploaded_file.read().decode("utf-8")
-        st.text_area("Contents of the file:", text, height=200)
-
-        try:
-            # Text in Zahlen (Tonnen) umwandeln
-            tonnen = [float(val.strip()) for val in text.splitlines() if val.strip().replace(".", "", 1).isdigit()]
-            
-            # Sortieren der Werte in aufsteigender Reihenfolge
-            tonnen.sort()
-            
-            # Anzahl der Werte ausgeben
-            st.write(f"Number of blocks: {len(tonnen)}")
-            
-            # Eingabe der Dichte in kg/m³
-            dichte_kg_m3 = st.number_input("Geben Sie die Dichte in kg/m³ ein:", min_value=0, value=2650, step=10)
-            
-            # Umrechnung von Tonnen in m³
-            werte_m3 = [val * 1000 / dichte_kg_m3 for val in tonnen]
-
-            # Berechnung der dritten Wurzel (Achsen in Metern)
-            m_achsen = [berechne_dritte_wurzel(val) for val in werte_m3]
-            # st.write("Achsen in Metern:")
-            # st.write(m_achsen)
-
-            # Visualisierung der Histogramme
-            # visualisiere_histogramm_m3_und_m(m_achsen, werte_m3)
-            
-            # Speichere m_achsen in session_state für spätere Verwendung
-            st.session_state.m_achsen = m_achsen
-
-        except Exception as e:
-            st.error(f"Errors in the processing of data: {e}")  
-
-
-# Darstellung
-st.subheader("Visualisierung der Wahrscheinlichkeitsverteilung")
-
-# Berechnung und Visualisierung
-if 'einheit' in st.session_state:
-    if st.session_state.einheit == "Volumen in m³" and 'm_achsen' in st.session_state:
-        # Aufruf der Funktion zur Berechnung und Visualisierung mit m_achsen
-        fig1 = berechne_perzentile_und_visualisierung(st.session_state.m_achsen)
-        st.session_state.fig1 = fig1  # Speichern von fig1 im session_state
-    elif st.session_state.einheit == "Masse in t (Dichte erforderlich)" and 'm_achsen' in st.session_state:
-        # Aufruf der Funktion zur Berechnung und Visualisierung mit m_achsen
-        fig1 = berechne_perzentile_und_visualisierung(st.session_state.m_achsen)
-        st.session_state.fig1 = fig1  # Speichern von fig1 im session_state
-
-# Anzeige der gespeicherten Grafiken
-if 'fig1' in st.session_state:
-    st.pyplot(st.session_state.fig1)  # Zeigt fig1 an, wenn es im session_state gespeichert ist
-
-
-# Anpassung einer Wahrscheinlichkeitsfunktion
-st.subheader("Anpassung von Wahrscheinlichkeitsfunktionen")
-
-# Alle Verteilungen werden automatisch berechnet und visualisiert
-if 'einheit' in st.session_state:
-    if st.session_state.einheit == "Volumen in m³" and 'm_achsen' in st.session_state:
-        fig2 = passe_verteilungen_an_und_visualisiere(st.session_state.m_achsen, ['genexpon', 'expon', 'powerlaw'])
-        st.session_state.fig2 = fig2
-    elif st.session_state.einheit == "Masse in t (Dichte erforderlich)" and 'm_achsen' in st.session_state:
-        # Aufruf der Funktion zur Berechnung und Visualisierung mit m_achsen
-        fig2 = passe_verteilungen_an_und_visualisiere(st.session_state.m_achsen, ['genexpon', 'expon', 'powerlaw'])
-        st.session_state.fig2 = fig2  # Speichern von fig2 im session_state
-
-# Visualisierung der berechneten Verteilungen
-if 'fig2' in st.session_state:
-    st.pyplot(st.session_state.fig2)
-
-
-# Tabelle mit Perzentilen 
-st.subheader("Tabellenvergleich der Perzentilen")
-
-if 'm_achsen' in st.session_state:
-    Perc_steps_short = ['0', '25', '50', '75', '95', '96', '97', '98', '99', '100']
-    percentiles = [0, 25, 50, 75, 95, 96, 97, 98, 99, 100]
-
-    # Sicherstellen, dass alle notwendigen Parameter gespeichert sind
-    if all(param in st.session_state for param in ['a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4']): # 'shape2', 'loc2', 'scale2', 
-        try:
-            # Berechnung der Perzentile für jede Verteilung
-            L1s = calculate_percentiles(stats.genexpon, percentiles, 
-                                        st.session_state.a1, st.session_state.b1, st.session_state.c1, 
-                                        st.session_state.loc1, st.session_state.scale1)
-            #L2s = calculate_percentiles(stats.lognorm, percentiles, 
-            #                            st.session_state.shape2, st.session_state.loc2, st.session_state.scale2)
-            L3s = calculate_percentiles(stats.expon, percentiles, 
-                                        st.session_state.loc3, st.session_state.scale3)
-            L4s = calculate_percentiles(stats.powerlaw, percentiles, 
-                                        st.session_state.a4, st.session_state.loc4, st.session_state.scale4)
-            
-            # Sicherstellen, dass alle Perzentile als numpy-Array vorliegen
-            upload_perz = berechne_perzentile(m_achsen, [0, 25, 50, 75, 95, 96, 97, 98, 99, 100])
-            upload_perz = np.array(upload_perz)
+            # Ensure all percentiles are numpy arrays for easier cubic calculation
+            upload_perz = np.array(np.percentile(st.session_state.m_achsen, percentiles_to_show))
             L1s = np.array(L1s)
-            #L2s = np.array(L2s)
             L3s = np.array(L3s)
             L4s = np.array(L4s)
 
             upload_perz3 = upload_perz**3
             L1s3 = L1s**3
-            #L2s3 = L2s**3
             L3s3 = L3s**3
             L4s3 = L4s**3
             
             df1 = pd.DataFrame({
-                "percentile": Perc_steps_short,
+                "percentile": [str(p) for p in percentiles_to_show],
                 "upload [m³]": upload_perz3,
                 "expon [m³]": L3s3,
                 "genexpon [m³]": L1s3,
                 "powerlaw [m³]": L4s3
             })
-            # CSS-Styling für bestimmte Zeilen (5.-8. Zeile fett drucken)
-            # Setze die Formatierung von Zeilen 5 bis 8 auf fett
-            styled_df = df1.style.apply(lambda x: ['font-weight: bold' if 5 <= i <= 8 else '' for i in range(len(x))], axis=1)
-            # Entferne die Indexspalte
-            styled_df = styled_df.hide(axis="index")
-            # Zeige den DataFrame ohne Index und mit den gestylten Zeilen
+            
+            # CSS-Styling for specific rows (5th to 8th row bold) - using a slightly more robust method
+            def highlight_rows(s):
+                is_bold = ['font-weight: bold' if i in [4, 5, 6, 7] else '' for i in range(len(s))]
+                return is_bold
+
+            styled_df = df1.style.apply(highlight_rows, axis=0) # Apply to columns to check index
+            styled_df = styled_df.hide(axis="index") # Remove the index column
             st.dataframe(styled_df)
 
         except Exception as e:
-            if 'einheit' in st.session_state:
-                # Wenn sich die Einheit ändert (von m³ zu Tonnen oder umgekehrt)
-                if 'm_achsen' not in st.session_state:
-                    st.error("Blockliste erforderlich. Bitte auswählen oder hochladen!")
-                else:
-                    st.error(f"Bitte laden Sie die Beispiel-Datei neu.")
+            st.error(f"Could not calculate percentiles: {e}. Please ensure data is loaded correctly and distributions are fitted.")
+    else:
+        st.info("Please load data and ensure distributions are fitted to see the percentile table.")
