@@ -325,7 +325,7 @@ with st.sidebar:
 
     st.subheader("Upload Your Own File")
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
-    st.warning("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
+    st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
 
     if uploaded_user_file is not None:
         # Check if this is a new file (different from what's currently loaded)
