@@ -289,33 +289,38 @@ with st.sidebar:
                     st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
 
     st.subheader("Upload Your Own File")
-    # Der Key wurde hier entfernt, um den Fehler zu vermeiden
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
     
     if uploaded_user_file is not None:
         with st.spinner("Processing uploaded file..."):
             file_content = uploaded_user_file.read().decode("utf-8")
+            # Temporär Dateiname und Inhalt setzen - wird bei Verarbeitungsfehler zurückgesetzt
             st.session_state.uploaded_file_content = file_content
-            st.session_state.uploaded_filename = uploaded_user_file.name # Dies sollte jetzt den Namen der hochgeladenen Datei korrekt setzen
+            st.session_state.uploaded_filename = uploaded_user_file.name
             
             m_axes, volumes_m3 = process_uploaded_data(
                 file_content,
                 selected_unit,
                 density_input
             )
-            st.session_state.m_achsen = m_axes
-            st.session_state.volumes_m3 = volumes_m3
-
-            if m_axes is not None: # Check if data processing was successful
+            
+            if m_axes is not None: # Verarbeitung erfolgreich
+                st.session_state.m_achsen = m_axes
+                st.session_state.volumes_m3 = volumes_m3
                 st.success("Your file was processed successfully.")
-                # Force rerun to update main content area with processed data
                 st.rerun()
-            else:
+            else: # Verarbeitung fehlgeschlagen
                 st.error("File could not be processed. Please check the format and decimal separator (use '.' instead of ',').")
-                # Do not rerun if processing failed, to keep error message visible
+                # Zustand zurücksetzen, wenn die Verarbeitung fehlschlägt
+                st.session_state.uploaded_file_content = None
+                st.session_state.uploaded_filename = None
+                st.session_state.m_achsen = None # Sicherstellen, dass m_achsen None ist
+                st.session_state.volumes_m3 = None # Sicherstellen, dass volumes_m3 None ist
+                # Kein rerun hier, damit die Fehlermeldung sichtbar bleibt
+
+    # Dieser elif-Block ist wichtig, falls die Einheit geändert wird, nachdem eine Datei geladen wurde.
+    # Er prüft, ob Inhalte in der Session vorhanden sind, aber noch nicht verarbeitet wurden (m_achsen ist None).
     elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
-        # If a file was loaded (e.g., example) but then unit changed and m_achsen cleared, re-process if possible
-        # This handles the case where unit changes and an example file is already "loaded"
         st.info("File needs to be re-processed due to unit change or initial load.")
         m_axes, volumes_m3 = process_uploaded_data(
             st.session_state.uploaded_file_content,
@@ -325,8 +330,8 @@ with st.sidebar:
         st.session_state.m_achsen = m_axes
         st.session_state.volumes_m3 = volumes_m3
 
-        if m_axes is not None: # Only rerun if re-processing was successful
-            st.rerun() # Added rerun here to update UI after re-processing
+        if m_axes is not None: # Nur rerun, wenn die Neuverarbeitung erfolgreich war
+            st.rerun() # Rerun hier hinzugefügt, um die UI nach der Neuverarbeitung zu aktualisieren
 
 # --- Main Content Area ---
 if st.session_state.m_achsen is None:
@@ -343,13 +348,6 @@ else:
     st.pyplot(fig1)
 
     st.subheader("Fitting Probability Functions")
-    # Allow user to select distributions
-    # selected_dists = st.multiselect(
-    #     "Select distributions to fit:",
-    #     ['genexpon', 'expon', 'powerlaw'],
-    #     default=['genexpon', 'expon', 'powerlaw'] # All selected by default
-    # )
-    # For now, keep all distributions automatically calculated as per original code logic
     selected_dists = ['genexpon', 'expon', 'powerlaw'] 
     
     fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists)
