@@ -261,14 +261,14 @@ Linking the percentiles of such BSDs, that define the size of the design block (
 
 This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW](https://pigeotechnik.pythonanywhere.com/)).
 It offers the determination of meaningful BSDs, which is also possible with a limited number of block size measurements. 
-This provides more certain, accurate, verifiable, holistic, and objective results for meaningful rockfall hazard assessment. 
+This provides more certain, accurate, verifiable, holistic, and objective results for more meaningful rockfall hazard assessment. 
 
 Fitted distributions often result in infinite block sizes or dust particle sizes, which are not useful for rockfall modelling.
-In the design of rockfall protection measures and hazard analyses, rockfall frequencies (magnitude to frequency relations M/F (Corominas et al. 2018)) and return periods play an important role. 
-This requires knowledge of the events on the one hand and the definition of a worst-case scenario (depending on the protection target) on the other. 
-Expert opinion is required (silent witnesses with estimated ages, reports from residents or records of past events)!
+In the design of rockfall protection measures and hazard analyses, rockfall frequencies (magnitude to frequency relations M/F; Corominas et al. (2018)) and return periods play an important role. 
+This requires knowledge of the events on the one hand and the definition of a worst-case scenario on the other. 
+Expert opinion is required! 
 Based on a defined worst-case scenario (with a certain annuality), events/block sizes with higher return periods may be neglected (cut off). 
-At the lower end, simulation programmes are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
+At the lower end, simulation programs are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
 """)
 
 # --- Sidebar for user input ---
