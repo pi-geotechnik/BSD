@@ -283,7 +283,7 @@ with st.sidebar:
 
                     st.success(f"The sample file '{name}' was loaded successfully.")
                     # Force rerun to update main content area with processed data
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
 
@@ -305,7 +305,7 @@ with st.sidebar:
             st.session_state.volumes_m3 = volumes_m3
             st.success("Your file was processed successfully.")
             # Force rerun to update main content area with processed data
-            st.experimental_rerun()
+            st.rerun()
     elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
         # If a file was loaded (e.g., example) but then unit changed and m_achsen cleared, re-process if possible
         # This handles the case where unit changes and an example file is already "loaded"
