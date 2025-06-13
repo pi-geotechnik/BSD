@@ -126,7 +126,7 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     if 'expon' in selected_distributions:
         loc3, scale3 = stats.expon.fit(m_axes)
         X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), 
-                         stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
+                         stats.expon.ppf(0.999, loc=loc3, scale=loc3), len(m_axes))
         ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
         ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
         
@@ -277,9 +277,8 @@ with st.sidebar:
                     st.session_state.uploaded_file_content = example_file_content.decode("utf-8")
                     st.session_state.uploaded_filename = f"sample_{name}.txt"
                     
-                    # --- WICHTIGE ÄNDERUNG: Setze den File Uploader zurück ---
+                    # Setze den File Uploader zurück
                     st.session_state.user_file_uploader_key = None
-                    # --- ENDE WICHTIGE ÄNDERUNG ---
 
                     # Process the data
                     m_axes, volumes_m3 = process_uploaded_data(
@@ -290,11 +289,6 @@ with st.sidebar:
                     st.session_state.m_achsen = m_axes
                     st.session_state.volumes_m3 = volumes_m3
                     
-                    # --- DEBUGGING OUTPUT (optional, zur Diagnose) ---
-                    #st.write(f"DEBUG: m_axes after example load: {m_axes[:5]}...") # Show first 5 elements
-                    #st.write(f"DEBUG: session_state.m_achsen after example load: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
-                    # --- END DEBUGGING OUTPUT ---
-
                     st.success(f"The sample file '{name}' was loaded successfully.")
                     # Force rerun to update main content area with processed data
                     st.rerun()
@@ -302,9 +296,8 @@ with st.sidebar:
                     st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
 
     st.subheader("Upload Your Own File")
-    # --- WICHTIGE ÄNDERUNG: Füge einen Key zum File Uploader hinzu ---
+    # Füge einen Key zum File Uploader hinzu
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"], key="user_file_uploader_key")
-    # --- ENDE WICHTIGE ÄNDERUNG ---
     
     if uploaded_user_file is not None:
         with st.spinner("Processing uploaded file..."):
@@ -319,11 +312,6 @@ with st.sidebar:
             )
             st.session_state.m_achsen = m_axes
             st.session_state.volumes_m3 = volumes_m3
-
-            # --- DEBUGGING OUTPUT (optional, zur Diagnose) ---
-            #st.write(f"DEBUG: m_axes after user upload: {m_axes[:5]}...") # Show first 5 elements
-            #st.write(f"DEBUG: session_state.m_achsen after user upload: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
-            # --- END DEBUGGING OUTPUT ---
 
             if m_axes is not None: # Check if data processing was successful
                 st.success("Your file was processed successfully.")
@@ -343,11 +331,6 @@ with st.sidebar:
         )
         st.session_state.m_achsen = m_axes
         st.session_state.volumes_m3 = volumes_m3
-
-        # --- DEBUGGING OUTPUT (optional, zur Diagnose) ---
-        #st.write(f"DEBUG: m_axes after re-processing: {m_axes[:5]}...") # Show first 5 elements
-        #st.write(f"DEBUG: session_state.m_achsen after re-processing: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
-        # --- END DEBUGGING OUTPUT ---
 
         if m_axes is not None: # Only rerun if re-processing was successful
             st.rerun() # Added rerun here to update UI after re-processing
