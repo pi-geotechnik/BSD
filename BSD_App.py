@@ -248,14 +248,13 @@ def clear_all_data():
 st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
 st.title("Block Size Distribution")
 st.markdown("""
-    *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH*
-    *developed in the course of her doctoral thesis 2023 'Procedures for assessing the hazard posed by rock slopes'*
+    *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH* <br>
+    *developed in the course of her Doctoral Thesis 2023 'Procedures for assessing the hazard posed by rock slopes'*<br>
     Corresponding reference: [Scientific article on SpringerLink](https://link.springer.com/article/10.1007/s11069-024-06432-4)
-    
-    Version 2.1, June 2025
-    
-    This application visualizes block size distributions, fits distribution functions to them and returns blocklists of the fitted distribution for rockfall simulation (e.g. with THROW).
-    Link to THROW: [THROW application](https://pigeotechnik.pythonanywhere.com/)
+
+    Version 2, June 2025
+
+    This application visualizes block size distributions, fits distribution functions to them and returns blocklists of the fitted distribution for rockfall simulation (e.g. with [THROW application](https://pigeotechnik.pythonanywhere.com/)
 """)
 
 # --- Sidebar for user input ---
