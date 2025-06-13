@@ -126,7 +126,7 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     if 'expon' in selected_distributions:
         loc3, scale3 = stats.expon.fit(m_axes)
         X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), 
-                         stats.expon.ppf(0.999, loc=loc3, scale=loc3), len(m_axes))
+                         stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
         ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
         ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
         
@@ -240,9 +240,6 @@ with st.sidebar:
         st.session_state.m_achsen = None
     if 'volumes_m3' not in st.session_state:
         st.session_state.volumes_m3 = None
-    # Initialize the key for the file uploader
-    if 'user_file_uploader_key' not in st.session_state:
-        st.session_state.user_file_uploader_key = None
 
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
@@ -255,7 +252,6 @@ with st.sidebar:
         st.session_state.volumes_m3 = None
         st.session_state.uploaded_file_content = None # Clear loaded file content
         st.session_state.uploaded_filename = None # Clear loaded filename
-        st.session_state.user_file_uploader_key = None # Clear the file uploader widget
         st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
         st.rerun() # Rerun to clear plots immediately
 
@@ -277,9 +273,6 @@ with st.sidebar:
                     st.session_state.uploaded_file_content = example_file_content.decode("utf-8")
                     st.session_state.uploaded_filename = f"sample_{name}.txt"
                     
-                    # Setze den File Uploader zurück
-                    st.session_state.user_file_uploader_key = None
-
                     # Process the data
                     m_axes, volumes_m3 = process_uploaded_data(
                         st.session_state.uploaded_file_content,
@@ -296,8 +289,8 @@ with st.sidebar:
                     st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
 
     st.subheader("Upload Your Own File")
-    # Füge einen Key zum File Uploader hinzu
-    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"], key="user_file_uploader_key")
+    # Der Key wurde hier entfernt, um den Fehler zu vermeiden
+    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
     
     if uploaded_user_file is not None:
         with st.spinner("Processing uploaded file..."):
