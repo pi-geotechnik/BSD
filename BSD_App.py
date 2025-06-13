@@ -35,9 +35,9 @@ LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
 # Beispiel-Datei URLs auf GitHub
 EXAMPLE_FILES = {
     #"Kalk": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_dachsteinkalk_m3.txt", # Auskommentiert, da nicht in der Original-App verwendet
-    "Rauwacke": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_mils_rauwacke_m3.txt",
-    "Orthogneiss": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_rossatz_orthogneis_m3.txt",
-    "Slate": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_vals_schiefer_m3.txt"
+    "Rauwacke": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_mils_rauwacke_m3.txt",
+    "Orthogneiss": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_rossatz_orthogneis_m3.txt",
+    "Slate": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_vals_schiefer_m3.txt"
 }
 
 # --- Hilfsfunktionen ---
