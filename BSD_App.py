@@ -265,6 +265,7 @@ with st.sidebar:
         st.session_state.last_error_message = None
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
+    st.warning("Please upload a block file.\nAttention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
 
     # Check if the unit has changed
     if st.session_state.einheit != selected_unit:
@@ -276,7 +277,6 @@ with st.sidebar:
         st.session_state.uploaded_filename = None 
         st.session_state.last_error_message = None # Auch Fehlermeldung löschen bei Einheitswechsel
         st.session_state.file_source = None # Hinzugefügt: file_source löschen bei Einheitswechsel
-        st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
         st.rerun() # Rerun to clear plots immediately
 
     # Density input only if mass is selected
