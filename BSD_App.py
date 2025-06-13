@@ -265,7 +265,6 @@ with st.sidebar:
         st.session_state.last_error_message = None
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
-    st.warning("Please upload a block file.\nAttention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
 
     # Check if the unit has changed
     if st.session_state.einheit != selected_unit:
@@ -326,7 +325,8 @@ with st.sidebar:
 
     st.subheader("Upload Your Own File")
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
-    
+    st.warning("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
+
     if uploaded_user_file is not None:
         # Check if this is a new file (different from what's currently loaded)
         if (st.session_state.uploaded_filename != uploaded_user_file.name or 
