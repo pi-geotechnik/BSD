@@ -253,6 +253,7 @@ st.markdown("""
 Version 2.1, June 2025
 
 This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
+
 Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021?msockid=0f6932b2fb8d63ee018527a8fa6a62a9), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4), Zerobin & Preh (2025)
 
 As worked out in the above refereces, designing rock fall protection measures with only one *design block* may result in unreliable trajectories (i.e. kinetic energies, bounce heights and runout). 
@@ -269,6 +270,8 @@ This requires knowledge of the events on the one hand and the definition of a wo
 Expert opinion is required! 
 Based on a defined worst-case scenario (with a certain annuality), events/block sizes with higher return periods may be neglected (cut off). 
 At the lower end, simulation programs are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
+
+This app is a open source project. 
 """)
 
 # --- Sidebar for user input ---
