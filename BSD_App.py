@@ -444,7 +444,7 @@ else:
             
             df1 = pd.DataFrame({
                 "percentile": [str(p) for p in percentiles_to_show],
-                "upload [m³]": upload_perz3,
+                "sample [m³]": upload_perz3,
                 "expon [m³]": L3s3,
                 "genexpon [m³]": L1s3,
                 "powerlaw [m³]": L4s3
