@@ -533,19 +533,19 @@ else:
         col_min_max_1, col_min_max_2 = st.columns(2)
         with col_min_max_1:
             min_block_axis = st.number_input(
-                "Minimum Block Axis [m]:", 
-                min_value=0.01, 
-                value=0.01, # Default value
-                step=0.01, 
+                "Minimum Block Axis [m] (default of 10 cm axis corresponds to a volume of 0.001 m³):", 
+                min_value=0.05, 
+                value=0.10, # Default value
+                step=0.05, 
                 format="%.2f", 
                 key="min_block_axis_input_download"
             )
         with col_min_max_2:
             max_block_axis = st.number_input(
-                "Maximum Block Axis [m]:", 
-                min_value=min_block_axis + 0.01, # Ensures max > min
-                value=5.00, # Default value
-                step=0.01, 
+                "Maximum Block Axis [m] (default of 1.5 m axis corresponds to a volume of 3.375 m³:", 
+                min_value=min_block_axis + 0.05, # Ensures max > min
+                value=1.50, # Default value
+                step=0.05, 
                 format="%.2f", 
                 key="max_block_axis_input_download"
             )
@@ -558,10 +558,10 @@ else:
         # Number of samples to generate
         num_samples = st.slider(
             "Number of blocks to generate:", 
-            min_value=1000, 
-            max_value=1000000, 
+            min_value=500, 
+            max_value=10000, 
             value=1000, 
-            step=1000, 
+            step=500, 
             key="num_samples_slider_download",
             help="Generate a larger number of samples to ensure sufficient blocks after filtering."
         )
