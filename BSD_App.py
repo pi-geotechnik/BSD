@@ -261,7 +261,7 @@ Block size distributions (BSDs) derived from debris fields are very subjective.
 Linking the percentiles of such BSDs, that define the size of the design block (95th-98th, according to ONR24810), with the frequency of rockfall events is not meaningful.
 
 **This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW](https://pigeotechnik.pythonanywhere.com/)).
-It offers the determination of meaningful BSDs, which is also possible with a limited number of block size measurements. 
+It offers the determination of more meaningful BSDs, which is also possible with a limited number of block size measurements. 
 This provides more certain, accurate, verifiable, holistic, and objective results for more meaningful rockfall hazard assessment.**
 
 Fitted distributions often result in infinite block sizes or dust particle sizes, which are not useful for rockfall modelling.
