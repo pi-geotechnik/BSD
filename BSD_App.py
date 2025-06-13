@@ -218,7 +218,7 @@ def process_uploaded_data(file_content, unit_type, density_kg_m3=None):
 
 # --- Streamlit App Layout ---
 
-# Header and Info
+# Header und Info
 st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
 st.title("Block Size Distribution")
 st.markdown("""
@@ -240,6 +240,10 @@ with st.sidebar:
         st.session_state.m_achsen = None
     if 'volumes_m3' not in st.session_state:
         st.session_state.volumes_m3 = None
+    # Initialize the key for the file uploader
+    if 'user_file_uploader_key' not in st.session_state:
+        st.session_state.user_file_uploader_key = None
+
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
 
@@ -249,7 +253,9 @@ with st.sidebar:
         # Clear data if unit changes, forcing re-upload
         st.session_state.m_achsen = None
         st.session_state.volumes_m3 = None
-        st.session_state.uploaded_file = None # Clear uploaded file
+        st.session_state.uploaded_file_content = None # Clear loaded file content
+        st.session_state.uploaded_filename = None # Clear loaded filename
+        st.session_state.user_file_uploader_key = None # Clear the file uploader widget
         st.warning("Please upload a block file. Attention: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator!")
         st.rerun() # Rerun to clear plots immediately
 
@@ -268,10 +274,13 @@ with st.sidebar:
                 response = requests.get(url)
                 if response.status_code == 200:
                     example_file_content = response.content
-                    # Simulate file upload for consistent processing
                     st.session_state.uploaded_file_content = example_file_content.decode("utf-8")
                     st.session_state.uploaded_filename = f"sample_{name}.txt"
                     
+                    # --- WICHTIGE ÄNDERUNG: Setze den File Uploader zurück ---
+                    st.session_state.user_file_uploader_key = None
+                    # --- ENDE WICHTIGE ÄNDERUNG ---
+
                     # Process the data
                     m_axes, volumes_m3 = process_uploaded_data(
                         st.session_state.uploaded_file_content,
@@ -280,6 +289,11 @@ with st.sidebar:
                     )
                     st.session_state.m_achsen = m_axes
                     st.session_state.volumes_m3 = volumes_m3
+                    
+                    # --- DEBUGGING OUTPUT (optional, zur Diagnose) ---
+                    #st.write(f"DEBUG: m_axes after example load: {m_axes[:5]}...") # Show first 5 elements
+                    #st.write(f"DEBUG: session_state.m_achsen after example load: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
+                    # --- END DEBUGGING OUTPUT ---
 
                     st.success(f"The sample file '{name}' was loaded successfully.")
                     # Force rerun to update main content area with processed data
@@ -288,13 +302,15 @@ with st.sidebar:
                     st.error(f"Error loading the file '{name}'. Status code: {response.status_code}")
 
     st.subheader("Upload Your Own File")
-    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
+    # --- WICHTIGE ÄNDERUNG: Füge einen Key zum File Uploader hinzu ---
+    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"], key="user_file_uploader_key")
+    # --- ENDE WICHTIGE ÄNDERUNG ---
     
     if uploaded_user_file is not None:
         with st.spinner("Processing uploaded file..."):
             file_content = uploaded_user_file.read().decode("utf-8")
             st.session_state.uploaded_file_content = file_content
-            st.session_state.uploaded_filename = uploaded_user_file.name
+            st.session_state.uploaded_filename = uploaded_user_file.name # Dies sollte jetzt den Namen der hochgeladenen Datei korrekt setzen
             
             m_axes, volumes_m3 = process_uploaded_data(
                 file_content,
@@ -303,12 +319,12 @@ with st.sidebar:
             )
             st.session_state.m_achsen = m_axes
             st.session_state.volumes_m3 = volumes_m3
-            
-            # --- DEBUGGING OUTPUT ---
-            st.write(f"DEBUG: m_axes after user upload: {m_axes[:5]}...") # Show first 5 elements
-            st.write(f"DEBUG: session_state.m_achsen after user upload: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
+
+            # --- DEBUGGING OUTPUT (optional, zur Diagnose) ---
+            #st.write(f"DEBUG: m_axes after user upload: {m_axes[:5]}...") # Show first 5 elements
+            #st.write(f"DEBUG: session_state.m_achsen after user upload: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
             # --- END DEBUGGING OUTPUT ---
-            
+
             if m_axes is not None: # Check if data processing was successful
                 st.success("Your file was processed successfully.")
                 # Force rerun to update main content area with processed data
@@ -327,21 +343,22 @@ with st.sidebar:
         )
         st.session_state.m_achsen = m_axes
         st.session_state.volumes_m3 = volumes_m3
-        
-        # --- DEBUGGING OUTPUT ---
-        st.write(f"DEBUG: m_axes after re-processing: {m_axes[:5]}...") # Show first 5 elements
-        st.write(f"DEBUG: session_state.m_achsen after re-processing: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
+
+        # --- DEBUGGING OUTPUT (optional, zur Diagnose) ---
+        #st.write(f"DEBUG: m_axes after re-processing: {m_axes[:5]}...") # Show first 5 elements
+        #st.write(f"DEBUG: session_state.m_achsen after re-processing: {st.session_state.m_achsen[:5]}...") # Show first 5 elements
         # --- END DEBUGGING OUTPUT ---
 
         if m_axes is not None: # Only rerun if re-processing was successful
             st.rerun() # Added rerun here to update UI after re-processing
-            
+
 # --- Main Content Area ---
 if st.session_state.m_achsen is None:
     st.info("Please select a unit and load an example file or upload your own file to get started.")
 else:
     # Display file content if available
-    if 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content:
+    # Dieser Block zeigt den Dateinamen und den Inhalt an, basierend auf st.session_state
+    if st.session_state.uploaded_filename and st.session_state.uploaded_file_content:
         st.subheader(f"Contents of {st.session_state.uploaded_filename}:")
         st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
 
@@ -403,9 +420,10 @@ else:
             def highlight_rows(s):
                 is_bold = ['font-weight: bold' if i in [4, 5, 6, 7] else '' for i in range(len(s))]
                 return is_bold
-
-            styled_df = df1.style.apply(highlight_rows, axis=0) # Apply to columns to check index
-            styled_df = styled_df.hide(axis="index") # Remove the index column
+            # Apply to columns to check index
+            styled_df = df1.style.apply(highlight_rows, axis=0) 
+            # Remove the index column
+            styled_df = styled_df.hide(axis="index") 
             st.dataframe(styled_df)
 
         except Exception as e:
