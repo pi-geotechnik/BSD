@@ -544,7 +544,6 @@ else:
                 step=0.05, 
                 format="%.2f", 
                 key="min_block_axis_input_download"
-                st.info("Note: the default min. value of 10 cm axis corresponds to a volume of 0.001 m³")
             )
         with col_min_max_2:
             max_block_axis = st.number_input(
