@@ -29,6 +29,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Füge diesen Stilblock hinzu, um die Schriftgröße von st.info anzupassen
+st.markdown("""
+    <style>
+    /* Reduziert die Schriftgröße des Textes in st.info Boxen */
+    div[data-testid="stInfo"] p {
+        font-size: 0.95em; /* Passt die Größe an. 1em ist die Standardtextgröße (wie Selectbox). 0.95em macht es leicht kleiner. */
+                          /* Du kannst auch 'smaller' oder einen spezifischen Pixelwert wie '14px' verwenden. */
+    }
+    /* Optional: Wenn du auch die Schriftgröße von st.subheader ändern möchtest, kommentiere dies aus und passe es an */
+    /* h3 {
+        font-size: 1.2em; /* Macht h3 kleiner als die Standardgröße (normalerweise 1.5em) */
+    } */
+    </style>
+""", unsafe_allow_html=True)
+
 # Pfad zum Logo
 LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
 
