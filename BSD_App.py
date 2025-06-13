@@ -406,6 +406,20 @@ with st.sidebar:
         else:
             st.session_state.last_error_message = "File could not be re-processed after unit change. Please check format."
             st.rerun()
+            
+    st.subheader("Support this Project")
+    st.write("If you find this application useful, consider supporting its development!")
+
+    # Dein tatsächlicher Spenden-Link hier einfügen
+    DONATION_LINK = buymeacoffee.com/ztilleditsz 
+
+    st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
+    # Oder für PayPal:
+    # st.link_button("Donate via PayPal 🙏", url="https://paypal.me/deinusername")
+
+    st.markdown("Thank you for your support!")
+
+
 
 # --- Main Content Area ---
 # Clear old messages when new data is loaded
@@ -533,8 +547,7 @@ else:
 
         # 2. Min/Max Block Axis Input (for block axis [m])
         st.markdown("Set the minimum and maximum **block axis** values for the generated distribution (values outside this range will be excluded).")
-        st.info("Note: the default min. value of 10 cm axis corresponds to a volume of 0.001 m³")
-        st.info("Note: the default max. value of 1.5 m axis corresponds to a volume of 3.375 m³")
+        st.info("Note: the default min. value of 10 cm block axis corresponds to a volume of 0.001 m³; the default max. value of 1.5 m block axis corresponds to a volume of 3.375 m³")
         col_min_max_1, col_min_max_2 = st.columns(2)
         with col_min_max_1:
             min_block_axis = st.number_input(
