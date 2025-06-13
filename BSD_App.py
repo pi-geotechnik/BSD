@@ -355,6 +355,15 @@ with st.sidebar:
                     st.session_state.success_message = None
                     st.rerun()
 
+    # Check if user file was removed (when uploader shows None but we still have user data)
+    elif (uploaded_user_file is None and 
+        st.session_state.file_source == 'user' and 
+        st.session_state.m_achsen is not None):
+        # User removed the uploaded file, clear all data
+        clear_all_data()
+        st.info("File removed. Please upload a new file or select a sample file.")
+        st.rerun()
+        
     # Dieser elif-Block ist wichtig, falls die Einheit geändert wird, nachdem eine Datei geladen wurde.
     elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
         st.info("File needs to be re-processed due to unit change or initial load.")
