@@ -308,9 +308,12 @@ with st.sidebar:
                         st.session_state.block_count = block_count
                         st.session_state.file_source = 'sample'
                         st.session_state.success_message = f"The sample file '{name}' was loaded successfully."
+                        # Clear any previous error messages
+                        st.session_state.last_error_message = None
                         st.rerun()
                     else:
                         st.session_state.last_error_message = f"Error processing the sample file '{name}'."
+                        st.session_state.success_message = None
                         st.rerun()
                 else:
                     st.session_state.last_error_message = f"Error loading the file '{name}'. Status code: {response.status_code}"
@@ -320,30 +323,37 @@ with st.sidebar:
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
     
     if uploaded_user_file is not None:
-        with st.spinner("Processing uploaded file..."):
-            # Clear existing data before processing new user file
-            clear_all_data()
+        # Check if this is a new file (different from what's currently loaded)
+        if (st.session_state.uploaded_filename != uploaded_user_file.name or 
+            st.session_state.file_source != 'user'):
             
-            file_content = uploaded_user_file.read().decode("utf-8")
-            
-            m_axes, volumes_m3, block_count = process_uploaded_data(
-                file_content,
-                selected_unit,
-                density_input
-            )
-            
-            if m_axes is not None:
-                st.session_state.uploaded_file_content = file_content
-                st.session_state.uploaded_filename = uploaded_user_file.name
-                st.session_state.m_achsen = m_axes
-                st.session_state.volumes_m3 = volumes_m3
-                st.session_state.block_count = block_count
-                st.session_state.file_source = 'user'
-                st.session_state.success_message = "Your file was processed successfully."
-                st.rerun()
-            else:
-                st.session_state.last_error_message = "File could not be processed. Please check the format and decimal separator (use '.' instead of ',') and ensure the file contains valid numerical data."
-                st.rerun()
+            with st.spinner("Processing uploaded file..."):
+                # Clear existing data before processing new user file
+                clear_all_data()
+                
+                file_content = uploaded_user_file.read().decode("utf-8")
+                
+                m_axes, volumes_m3, block_count = process_uploaded_data(
+                    file_content,
+                    selected_unit,
+                    density_input
+                )
+                
+                if m_axes is not None:
+                    st.session_state.uploaded_file_content = file_content
+                    st.session_state.uploaded_filename = uploaded_user_file.name
+                    st.session_state.m_achsen = m_axes
+                    st.session_state.volumes_m3 = volumes_m3
+                    st.session_state.block_count = block_count
+                    st.session_state.file_source = 'user'
+                    st.session_state.success_message = "Your file was processed successfully."
+                    # Clear any previous error messages
+                    st.session_state.last_error_message = None
+                    st.rerun()
+                else:
+                    st.session_state.last_error_message = "File could not be processed. Please check the format and decimal separator (use '.' instead of ',') and ensure the file contains valid numerical data."
+                    st.session_state.success_message = None
+                    st.rerun()
 
     # Dieser elif-Block ist wichtig, falls die Einheit geändert wird, nachdem eine Datei geladen wurde.
     elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
@@ -366,13 +376,19 @@ with st.sidebar:
             st.rerun()
 
 # --- Main Content Area ---
-# Display success message
-if st.session_state.success_message:
-    st.success(st.session_state.success_message)
+# Clear old messages when new data is loaded
+if st.session_state.m_achsen is not None:
+    # Only show success message if it exists
+    if st.session_state.success_message:
+        st.success(st.session_state.success_message)
+        # Clear the message after showing it once
+        st.session_state.success_message = None
 
 # Display error message
 if st.session_state.last_error_message:
     st.error(st.session_state.last_error_message)
+    # Clear the error message after showing it once
+    st.session_state.last_error_message = None
 
 if st.session_state.m_achsen is None:
     st.info("Please select a unit and load an example file or upload your own file to get started.")
