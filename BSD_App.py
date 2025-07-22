@@ -321,7 +321,7 @@ with st.sidebar:
             st.error("Density must be equal to or greater than 250 kg/m³.")
             density_input = None
 
-    st.subheader("Load Example Files")
+    st.subheader("Load an Example File")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             with st.spinner(f"Loading '{name}'..."):
