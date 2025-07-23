@@ -22,9 +22,10 @@ from PIL import Image
 
 # --- Konfiguration und Konstanten ---
 # Set page configuration
+mountain_emoji = "\u1FAA8" # This converts (U+26F0) \u26F0 into the actual '⛰️' character, (U+1FAA8) \u1FAA8 Stone
 st.set_page_config(
     page_title="BSD Block Size Distribution by curve fitting",
-    page_icon="🪨",
+    page_icon=mountain_emoji, # Use the variable containing the character
     layout="wide",
     initial_sidebar_state="expanded"
 )
