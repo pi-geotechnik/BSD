@@ -247,7 +247,7 @@ def clear_all_data():
 # Header und Info
 #st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
 st.title("Block Size Distribution")
-st.markdown("*A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH.*")
+st.markdown("*A block distribution code by Mariella ILLEDITSCH.*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
     Version 2.1, June 2025
