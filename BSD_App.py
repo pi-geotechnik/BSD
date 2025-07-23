@@ -423,7 +423,7 @@ with st.sidebar:
             st.session_state.last_error_message = "File could not be re-processed after unit change. Please check format."
             st.rerun()
             
-    st.subheader("Support this Project ❤️")
+    st.subheader("Support this Project")
     st.write("If you find this application useful, consider supporting its development!")
 
     # Dein tatsächlicher Spenden-Link hier einfügen
@@ -433,7 +433,7 @@ with st.sidebar:
     # Oder für PayPal:
     # st.link_button("Donate via PayPal 🙏", url="https://paypal.me/deinusername")
 
-    st.markdown("Thank you for your support!")
+    st.markdown("Thank you for your support! ❤️")
 
 
 
