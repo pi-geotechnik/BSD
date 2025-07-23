@@ -247,32 +247,33 @@ def clear_all_data():
 # Header und Info
 #st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
 st.title("Block Size Distribution")
-st.markdown("""
-*A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH.*
+with st.expander("ℹ️ About This Project"):
+    st.markdown("""
+    *A block distribution code by Mariella ILLEDITSCH, adapted for Streamlit by Mariella ILLEDITSCH.*
 
-Version 2.1, June 2025
+    Version 2.1, June 2025
 
-This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
+    This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
 
-Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021?msockid=0f6932b2fb8d63ee018527a8fa6a62a9), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4), Zerobin & Preh (2025)
+    Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021?msockid=0f6932b2fb8d63ee018527a8fa6a62a9), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4)
 
-As worked out in the above refereces, designing rock fall protection measures with only one *design block* may result in unreliable trajectories (i.e. kinetic energies, bounce heights and runout). 
-Block size distributions (BSDs) derived from debris fields are very subjective. 
-Linking the percentiles of such BSDs, that define the size of the design block (95th-98th, according to ONR24810), with the frequency of rockfall events is not meaningful.
+    As worked out in the above refereces, designing rock fall protection measures with only one *design block* may result in unreliable trajectories (i.e. kinetic energies, bounce heights and runout).
+    Block size distributions (BSDs) derived from debris fields are very subjective.
+    Linking the percentiles of such BSDs, that define the size of the design block (95th-98th, according to ONR24810), with the frequency of rockfall events is not meaningful.
 
-**This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW](https://pigeotechnik.pythonanywhere.com/)).
-It offers the determination of more meaningful BSDs, which is also possible with a limited number of block size measurements. 
-This provides more certain, accurate, verifiable, holistic, and objective results for more meaningful rockfall hazard assessment.**
+    **This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW](https://pigeotechnik.pythonanywhere.com/)).
+    It offers the determination of more meaningful BSDs, which is also possible with a limited number of block size measurements.
+    This provides more certain, accurate, verifiable, holistic, and objective results for more meaningful rockfall hazard assessment.**
 
-Fitted distributions often result in infinite block sizes or dust particle sizes, which are not useful for rockfall modelling.
-In the design of rockfall protection measures and hazard analyses, rockfall frequencies (magnitude to frequency relations M/F; Corominas et al. (2018)) and return periods play an important role. 
-This requires knowledge of the events on the one hand and the definition of a worst-case scenario on the other. 
-**Expert opinion is required!**
-Based on a defined worst-case scenario (with a certain annuality), events/block sizes with higher return periods may be neglected (cut off). 
-At the lower end, simulation programs are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
+    Fitted distributions often result in infinite block sizes or dust particle sizes, which are not useful for rockfall modelling.
+    In the design of rockfall protection measures and hazard analyses, rockfall frequencies (magnitude to frequency relations M/F; Corominas et al. (2018)) and return periods play an important role.
+    This requires knowledge of the events on the one hand and the definition of a worst-case scenario on the other.
+    **Expert opinion is required!**
+    Based on a defined worst-case scenario (with a certain annuality), events/block sizes with higher return periods may be neglected (cut off).
+    At the lower end, simulation programs are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
 
-This app is an open source project. 
-""")
+    This app is an open source project.
+    """)
 
 # --- Sidebar for user input ---
 with st.sidebar:
