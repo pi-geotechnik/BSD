@@ -90,7 +90,7 @@ def calculate_and_visualize_percentiles(m_axes, data_label):
     ax1.hist(m_axes, density=True, bins='auto', histtype='stepfilled', color='tab:blue', alpha=0.3, label=data_label + ' pdf')
 
     # CDF on normal scale
-    ax2.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label=data_label + ' cdf'
+    ax2.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label=data_label + ' cdf')
 
     # CDF on Log-scale
     ax3.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label=data_label + ' cdf')
