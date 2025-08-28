@@ -314,7 +314,11 @@ with st.sidebar:
             st.error("Density must be equal to or greater than 250 kg/m³.")
             density_input = None
 
-    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
+    # Initialize a key for the file uploader in session state
+    if 'file_uploader_key' not in st.session_state:
+        st.session_state['file_uploader_key'] = 0
+    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", 
+                                         type=["txt"], key=st.session_state['file_uploader_key'])
     st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
 
     # Process user file if uploaded
@@ -322,6 +326,7 @@ with st.sidebar:
         if (st.session_state.uploaded_filename != uploaded_user_file.name or
                 st.session_state.file_source != 'user'):
             with st.spinner("Processing uploaded file..."):
+                # Clear previous data when a new file is uploaded
                 clear_all_data()
                 file_content = uploaded_user_file.read().decode("utf-8")
 
@@ -347,12 +352,12 @@ with st.sidebar:
                     st.rerun()
 
     # Check if user file was removed
-    elif (uploaded_user_file is None and
-          st.session_state.file_source == 'user' and
-          st.session_state.m_achsen is not None):
-        clear_all_data()
-        st.info("File removed. Please upload a new file or select a sample file.")
-        st.rerun()
+#    elif (uploaded_user_file is None and
+#          st.session_state.file_source == 'user' and
+#          st.session_state.m_achsen is not None):
+#        clear_all_data()
+#        st.info("File removed. Please upload a new file or select a sample file.")
+#        st.rerun()
 
     # Re-process file after unit change if a file is already loaded
     elif ('uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None):
@@ -381,6 +386,9 @@ with st.sidebar:
         if st.button(f"Load sample file '{name}'"):
             with st.spinner(f"Loading '{name}'..."):
                 clear_all_data()
+                # Reset the file uploader by incrementing its key
+                st.session_state['file_uploader_key'] += 1
+                st.rerun()
 
                 response = requests.get(url)
                 if response.status_code == 200:
