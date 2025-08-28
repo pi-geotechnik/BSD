@@ -323,7 +323,7 @@ with st.sidebar:
 
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:",
                                          type=["txt"], key=st.session_state['file_uploader_key'])
-    st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
+    st.info("Note: Please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
 
     # Process user file if uploaded
     if uploaded_user_file:
@@ -358,7 +358,7 @@ with st.sidebar:
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
-    st.info("The uploaded file will be automatically removed when selecting a sample file.")
+    st.info("Note: The uploaded file (if any) will be automatically removed when selecting a sample file.")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             # Set a flag to load the sample file on the next run
