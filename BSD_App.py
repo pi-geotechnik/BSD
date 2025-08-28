@@ -376,6 +376,7 @@ with st.sidebar:
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
+    st.info("Note: please make sure that your own uploaded file (if any) is removed before selecting a sample file.")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             with st.spinner(f"Loading '{name}'..."):
@@ -410,6 +411,7 @@ with st.sidebar:
                     st.rerun()
 
     # --- Section: Support This Project ---
+    st.markdown("---")
     st.subheader("Support this Project")
     st.write("If you find this application useful, consider supporting its development!")
     DONATION_LINK = 'https://www.buymeacoffee.com//ztilleditsz'
