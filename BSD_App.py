@@ -358,7 +358,7 @@ with st.sidebar:
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
-    st.info("Note: The uploaded file (if any) will be automatically removed when selecting a sample file.")
+    st.info("Note: The uploaded file (if any) will be removed when selecting a sample file.")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             # Set a flag to load the sample file on the next run
@@ -518,7 +518,7 @@ else:
         st.markdown(f"Generating blocks from the fitted **{selected_download_distribution}** distribution.")
 
         st.markdown("Set the minimum and maximum **block axis** values for the generated distribution (values outside this range will be excluded).")
-        st.info("Note: the default min. value of 30 cm block axis corresponds to a volume of 0.027 m³; the default max. value of 1.5 m block axis corresponds to a volume of 3.375 m³ --- **Expert Opinion required!** ---")
+        st.info("Note: the default min. value of 30 cm block axis corresponds to a volume of 0.027 m³; the default max. value of 1.5 m block axis corresponds to a volume of 3.375 m³ --- **Expert opinion required!** ---")
         col_min_max_1, col_min_max_2 = st.columns(2)
         with col_min_max_1:
             min_block_axis = st.number_input(
