@@ -317,19 +317,19 @@ with st.sidebar:
     # Initialize a key for the file uploader in session state
     if 'file_uploader_key' not in st.session_state:
         st.session_state['file_uploader_key'] = 0
+    # Initialize a key for the file uploader in session state
+    if 'file_uploader_key' not in st.session_state:
+        st.session_state['file_uploader_key'] = 0
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", 
                                          type=["txt"], key=st.session_state['file_uploader_key'])
     st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
 
-    # Process user file if uploaded
-    if uploaded_user_file is not None:
-        if (st.session_state.uploaded_filename != uploaded_user_file.name or
-                st.session_state.file_source != 'user'):
+# This block now handles all processing logic for uploaded files.
+    if uploaded_user_file:
+        file_content = uploaded_user_file.read().decode("utf-8")
+        # Only process if it's a new or changed file
+        if file_content != st.session_state.get('uploaded_file_content'):
             with st.spinner("Processing uploaded file..."):
-                # Clear previous data when a new file is uploaded
-                clear_all_data()
-                file_content = uploaded_user_file.read().decode("utf-8")
-
                 m_axes, volumes_m3, block_count = process_uploaded_data(
                     file_content,
                     selected_unit,
@@ -344,12 +344,22 @@ with st.sidebar:
                     st.session_state.block_count = block_count
                     st.session_state.file_source = 'user'
                     st.session_state.success_message = "Your file was processed successfully."
-                    st.session_state.last_error_message = None
-                    st.rerun()
                 else:
                     st.session_state.last_error_message = "File could not be processed. Please check the format and decimal separator (use '.' instead of ',') and ensure the file contains valid numerical data."
-                    st.session_state.success_message = None
-                    st.rerun()
+
+        # Re-process file after unit change if a file is already loaded
+        elif st.session_state.einheit != st.session_state.get('last_processed_unit'):
+             with st.spinner("Re-processing file due to unit change..."):
+                m_axes, volumes_m3, block_count = process_uploaded_data(
+                    st.session_state.uploaded_file_content,
+                    selected_unit,
+                    density_input
+                )
+                if m_axes is not None:
+                    st.session_state.m_achsen = m_axes
+                    st.session_state.volumes_m3 = volumes_m3
+                    st.session_state.block_count = block_count
+                    st.session_state.last_processed_unit = st.session_state.einheit
 
     # Check if user file was removed
     elif (uploaded_user_file is None and
@@ -381,14 +391,13 @@ with st.sidebar:
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
-    st.info("Note: please make sure that your own uploaded file (if any) is removed before selecting a sample file.")
+    st.info("Note: The uploaded file (if any) will be automatically removed when selecting a sample file.")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             with st.spinner(f"Loading '{name}'..."):
-                clear_all_data()
                 # Reset the file uploader by incrementing its key
-                #st.session_state['file_uploader_key'] += 1
-                #st.rerun()
+                st.session_state['file_uploader_key'] += 1
+                st.rerun()
 
                 response = requests.get(url)
                 if response.status_code == 200:
