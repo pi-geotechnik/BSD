@@ -387,8 +387,8 @@ with st.sidebar:
             with st.spinner(f"Loading '{name}'..."):
                 clear_all_data()
                 # Reset the file uploader by incrementing its key
-                st.session_state['file_uploader_key'] += 1
-                st.rerun()
+                #st.session_state['file_uploader_key'] += 1
+                #st.rerun()
 
                 response = requests.get(url)
                 if response.status_code == 200:
