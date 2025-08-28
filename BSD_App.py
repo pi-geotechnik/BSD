@@ -436,7 +436,7 @@ else:
     st.subheader("Visualization of Probability Distribution")
     # Determine the label to use in the plots
     if st.session_state.file_source == 'user':
-        data_label = 'Uploaded File'
+        data_label = st.session_state.uploaded_filename
     else:
         data_label = st.session_state.uploaded_filename.replace('sample_', '').replace('.txt', '')
     fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen, data_label)
