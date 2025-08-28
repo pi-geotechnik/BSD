@@ -367,6 +367,14 @@ with st.sidebar:
             clear_all_data()
             st.session_state['file_uploader_key'] += 1
             st.rerun()
+    
+    # --- Section: Support This Project ---
+    st.markdown("---")
+    st.subheader("Support this Project")
+    st.write("If you find this application useful, consider supporting its development!")
+    DONATION_LINK = 'https://www.buymeacoffee.com//ztilleditsz'
+    st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
+    st.markdown("Thank you for your support! ❤️")
 
 # --- Main Content Area ---
 if st.session_state.load_sample_file_name:
@@ -640,11 +648,3 @@ else:
             mime="text/plain",
             help=f"Download the list of generated block values in {st.session_state.output_unit_for_download.upper()}."
         )
-
-# --- Section: Support This Project ---
-st.markdown("---")
-st.subheader("Support this Project")
-st.write("If you find this application useful, consider supporting its development!")
-DONATION_LINK = 'https://www.buymeacoffee.com//ztilleditsz'
-st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
-st.markdown("Thank you for your support! ❤️")
