@@ -354,7 +354,7 @@ with st.sidebar:
             clear_all_data()
             st.rerun()
 
-    st.markdown("---")
+    #st.markdown("---")
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
