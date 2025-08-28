@@ -76,7 +76,7 @@ def visualize_histograms_m3_and_m(m_values, m3_values):
     plt.tight_layout()
     return fig
 
-def calculate_and_visualize_percentiles(m_axes):
+def calculate_and_visualize_percentiles(m_axes, data_label):
     """
     Calculates percentiles and visualizes the probability density (PDF)
     and cumulative distribution function (CDF) on normal and log scales.
@@ -87,13 +87,13 @@ def calculate_and_visualize_percentiles(m_axes):
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
 
     # Histogram of the Probability density
-    ax1.hist(m_axes, density=True, bins='auto', histtype='stepfilled', color='tab:blue', alpha=0.3, label='upload pdf')
+    ax1.hist(m_axes, density=True, bins='auto', histtype='stepfilled', color='tab:blue', alpha=0.3, label=data_label + ' pdf')
 
     # CDF on normal scale
-    ax2.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
+    ax2.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label=data_label + ' cdf'
 
     # CDF on Log-scale
-    ax3.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
+    ax3.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label=data_label + ' cdf')
 
     # Axis labels
     ax1.set_xlim(left=None, right=None)
@@ -109,14 +109,14 @@ def calculate_and_visualize_percentiles(m_axes):
     ax3.set_ylabel('Cumulative probability F(a)', fontsize=14)
 
     # Legends
-    ax1.legend(loc='best', frameon=False)
-    ax2.legend(loc='best', frameon=False)
-    ax3.legend(loc='best', frameon=False)
+    ax1.legend(loc='best', frameon=False, fontsize='small')
+    ax2.legend(loc='best', frameon=False, fontsize='small')
+    ax3.legend(loc='best', frameon=False, fontsize='small')
 
     plt.tight_layout()
     return fig
 
-def fit_distributions_and_visualize(m_axes, selected_distributions):
+def fit_distributions_and_visualize(m_axes, selected_distributions, data_label):
     """
     Fits selected probability distributions to the data and visualizes their
     PDFs and CDFs against the uploaded data.
@@ -124,8 +124,7 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     fig, (ax4, ax5) = plt.subplots(nrows=1, ncols=2, figsize=(12, 4))
 
     # Histogram of m_axes
-    ax4.hist(m_axes, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3,
-             label='upload pdf')
+    ax4.hist(m_axes, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3, label=data_label + ' pdf')
 
     # CDF for m_axes (cumulative distribution)
     steps = np.linspace(0.01, 1.00, num=100)
@@ -177,12 +176,12 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     max_y_value = max(counts)
 
     # Axes for the plot
-    ax4.legend(loc='best', frameon=False)
+    ax4.legend(loc='best', frameon=False, fontsize='small')
     ax4.set_ylim(0, max_y_value * 1.1)
     ax4.set_xlabel('Block axis a [m]', fontsize=12)
     ax4.set_ylabel('Probability density f(a)', fontsize=12)
 
-    ax5.legend(loc='best', frameon=False)
+    ax5.legend(loc='best', frameon=False, fontsize='small')
     ax5.set_xscale('log')
     ax5.set_xlabel('Block axis a [m] (log)', fontsize=12)
     ax5.set_ylabel('Cumulative probability F(a)', fontsize=12)
@@ -435,13 +434,18 @@ else:
             st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
 
     st.subheader("Visualization of Probability Distribution")
-    fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen)
+    # Determine the label to use in the plots
+    if st.session_state.file_source == 'user':
+        data_label = 'Uploaded File'
+    else:
+        data_label = st.session_state.uploaded_filename.replace('sample_', '').replace('.txt', '')
+    fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen, data_label)
     st.pyplot(fig1)
 
     st.subheader("Fitting Probability Functions")
     selected_dists = ['genexpon', 'expon', 'powerlaw']
 
-    fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists)
+    fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists, data_label)
     st.pyplot(fig2)
 
     st.subheader("Tabular Comparison of Percentiles")
