@@ -129,7 +129,7 @@ def fit_distributions_and_visualize(m_axes, selected_distributions, data_label):
     # CDF for m_axes (cumulative distribution)
     steps = np.linspace(0.01, 1.00, num=100)
     percentiles_m_axes = np.quantile(m_axes, steps)
-    ax5.plot(percentiles_m_axes, steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload cdf')
+    ax5.plot(percentiles_m_axes, steps, lw=8.0, color='tab:blue', alpha=0.3, label=data_label + ' cdf')
 
     # Cumulative Distributions and CDF Calculations
     if 'expon' in selected_distributions:
