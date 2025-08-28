@@ -358,7 +358,7 @@ with st.sidebar:
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
-    st.info("Note: The uploaded file (if any) will be removed when selecting a sample file.")
+    st.info("Note: Your uploaded file (if any) will be removed when selecting a sample file.")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             # Set a flag to load the sample file on the next run
