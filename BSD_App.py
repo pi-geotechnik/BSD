@@ -352,12 +352,12 @@ with st.sidebar:
                     st.rerun()
 
     # Check if user file was removed
-#    elif (uploaded_user_file is None and
-#          st.session_state.file_source == 'user' and
-#          st.session_state.m_achsen is not None):
-#        clear_all_data()
-#        st.info("File removed. Please upload a new file or select a sample file.")
-#        st.rerun()
+    elif (uploaded_user_file is None and
+          st.session_state.file_source == 'user' and
+          st.session_state.m_achsen is not None):
+        clear_all_data()
+        st.info("File removed. Please upload a new file or select a sample file.")
+        st.rerun()
 
     # Re-process file after unit change if a file is already loaded
     elif ('uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None):
