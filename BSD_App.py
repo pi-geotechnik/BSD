@@ -44,7 +44,7 @@ LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
 
 # Beispiel-Datei URLs auf GitHub
 EXAMPLE_FILES = {
-    #"Lime": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_dachsteinkalk_m3.txt", # Auskommentiert, da Zustimmung von Laimer erforderlich
+    #"Lime": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_dachsteinkalk_m3.txt", # Auskommentiert, da nicht in der Original-App verwendet
     "Rauwacke": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_mils_rauwacke_m3.txt",
     "Orthogneiss": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_rossatz_orthogneis_m3.txt",
     "Slate": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_vals_schiefer_m3.txt"
@@ -231,7 +231,8 @@ def clear_all_data():
     keys_to_clear = [
         'm_achsen', 'volumes_m3', 'uploaded_file_content', 'uploaded_filename',
         'block_count', 'file_source', 'success_message', 'last_error_message',
-        'a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4'
+        'a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4',
+        'last_processed_unit'
     ]
     for key in keys_to_clear:
         if key in st.session_state:
@@ -298,6 +299,12 @@ with st.sidebar:
         st.session_state.success_message = None
     if 'last_error_message' not in st.session_state:
         st.session_state.last_error_message = None
+    if 'file_uploader_key' not in st.session_state:
+        st.session_state['file_uploader_key'] = 0
+    if 'load_sample_file_name' not in st.session_state:
+        st.session_state.load_sample_file_name = None
+    if 'last_processed_unit' not in st.session_state:
+        st.session_state.last_processed_unit = st.session_state.einheit
 
     # Check if the unit has changed
     if st.session_state.einheit != selected_unit:
@@ -314,28 +321,22 @@ with st.sidebar:
             st.error("Density must be equal to or greater than 250 kg/m³.")
             density_input = None
 
-    # Initialize a key for the file uploader in session state
-    if 'file_uploader_key' not in st.session_state:
-        st.session_state['file_uploader_key'] = 0
-    # Initialize a key for the file uploader in session state
-    if 'file_uploader_key' not in st.session_state:
-        st.session_state['file_uploader_key'] = 0
-    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", 
+    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:",
                                          type=["txt"], key=st.session_state['file_uploader_key'])
     st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
 
-# This block now handles all processing logic for uploaded files.
+    # Process user file if uploaded
     if uploaded_user_file:
         file_content = uploaded_user_file.read().decode("utf-8")
-        # Only process if it's a new or changed file
-        if file_content != st.session_state.get('uploaded_file_content'):
+        # Only process if it's a new or changed file, or if the unit has changed
+        if (file_content != st.session_state.get('uploaded_file_content') or
+            st.session_state.einheit != st.session_state.get('last_processed_unit')):
             with st.spinner("Processing uploaded file..."):
                 m_axes, volumes_m3, block_count = process_uploaded_data(
                     file_content,
                     selected_unit,
                     density_input
                 )
-
                 if m_axes is not None:
                     st.session_state.uploaded_file_content = file_content
                     st.session_state.uploaded_filename = uploaded_user_file.name
@@ -344,98 +345,64 @@ with st.sidebar:
                     st.session_state.block_count = block_count
                     st.session_state.file_source = 'user'
                     st.session_state.success_message = "Your file was processed successfully."
+                    st.session_state.last_processed_unit = st.session_state.einheit
                 else:
                     st.session_state.last_error_message = "File could not be processed. Please check the format and decimal separator (use '.' instead of ',') and ensure the file contains valid numerical data."
-
-        # Re-process file after unit change if a file is already loaded
-        elif st.session_state.einheit != st.session_state.get('last_processed_unit'):
-             with st.spinner("Re-processing file due to unit change..."):
-                m_axes, volumes_m3, block_count = process_uploaded_data(
-                    st.session_state.uploaded_file_content,
-                    selected_unit,
-                    density_input
-                )
-                if m_axes is not None:
-                    st.session_state.m_achsen = m_axes
-                    st.session_state.volumes_m3 = volumes_m3
-                    st.session_state.block_count = block_count
-                    st.session_state.last_processed_unit = st.session_state.einheit
-
-    # Check if user file was removed
-    elif (uploaded_user_file is None and
-          st.session_state.file_source == 'user' and
-          st.session_state.m_achsen is not None):
-        clear_all_data()
-        st.info("File removed. Please upload a new file or select a sample file.")
-        st.rerun()
-
-    # Re-process file after unit change if a file is already loaded
-    elif ('uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None):
-        st.info("File needs to be re-processed due to unit change or initial load.")
-        st.session_state.last_error_message = None
-
-        m_axes, volumes_m3, block_count = process_uploaded_data(
-            st.session_state.uploaded_file_content,
-            selected_unit,
-            density_input
-        )
-
-        if m_axes is not None:
-            st.session_state.m_achsen = m_axes
-            st.session_state.volumes_m3 = volumes_m3
-            st.session_state.block_count = block_count
+    else:
+        # Clear data if user file is removed
+        if st.session_state.get('file_source') == 'user':
+            clear_all_data()
             st.rerun()
-        else:
-            st.session_state.last_error_message = "File could not be re-processed after unit change. Please check format."
-            st.rerun()
+
+    st.markdown("---")
 
     # --- Section: Load Example Files ---
     st.subheader("Load Sample File [m³]")
-    st.info("Note: The uploaded file (if any) will be automatically removed when selecting a sample file.")
+    st.info("The uploaded file will be automatically removed when selecting a sample file.")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
-            with st.spinner(f"Loading '{name}'..."):
-                # Reset the file uploader by incrementing its key
-                st.session_state['file_uploader_key'] += 1
-                st.rerun()
-
-                response = requests.get(url)
-                if response.status_code == 200:
-                    example_file_content = response.content.decode("utf-8")
-
-                    m_axes, volumes_m3, block_count = process_uploaded_data(
-                        example_file_content,
-                        selected_unit,
-                        density_input
-                    )
-
-                    if m_axes is not None:
-                        st.session_state.uploaded_file_content = example_file_content
-                        st.session_state.uploaded_filename = f"sample_{name}.txt"
-                        st.session_state.m_achsen = m_axes
-                        st.session_state.volumes_m3 = volumes_m3
-                        st.session_state.block_count = block_count
-                        st.session_state.file_source = 'sample'
-                        st.session_state.success_message = f"The sample file '{name}' was loaded successfully."
-                        st.session_state.last_error_message = None
-                        st.rerun()
-                    else:
-                        st.session_state.last_error_message = f"Error processing the sample file '{name}'."
-                        st.session_state.success_message = None
-                        st.rerun()
-                else:
-                    st.session_state.last_error_message = f"Error loading the file '{name}'. Status code: {response.status_code}"
-                    st.rerun()
-
-    # --- Section: Support This Project ---
-    st.markdown("---")
-    st.subheader("Support this Project")
-    st.write("If you find this application useful, consider supporting its development!")
-    DONATION_LINK = 'https://www.buymeacoffee.com//ztilleditsz'
-    st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
-    st.markdown("Thank you for your support! ❤️")
+            # Set a flag to load the sample file on the next run
+            st.session_state.load_sample_file_name = name
+            # Clear all data and reset the uploader widget
+            clear_all_data()
+            st.session_state['file_uploader_key'] += 1
+            st.rerun()
 
 # --- Main Content Area ---
+if st.session_state.load_sample_file_name:
+    name = st.session_state.load_sample_file_name
+    url = EXAMPLE_FILES[name]
+    with st.spinner(f"Loading '{name}'..."):
+        response = requests.get(url)
+        if response.status_code == 200:
+            example_file_content = response.content.decode("utf-8")
+
+            m_axes, volumes_m3, block_count = process_uploaded_data(
+                example_file_content,
+                st.session_state.einheit,
+                st.session_state.get('density_input')
+            )
+
+            if m_axes is not None:
+                st.session_state.uploaded_file_content = example_file_content
+                st.session_state.uploaded_filename = f"sample_{name}.txt"
+                st.session_state.m_achsen = m_axes
+                st.session_state.volumes_m3 = volumes_m3
+                st.session_state.block_count = block_count
+                st.session_state.file_source = 'sample'
+                st.session_state.success_message = f"The sample file '{name}' was loaded successfully."
+                st.session_state.last_error_message = None
+                st.session_state.last_processed_unit = st.session_state.einheit
+                st.session_state.load_sample_file_name = None  # Clear the flag
+            else:
+                st.session_state.last_error_message = f"Error processing the sample file '{name}'."
+                st.session_state.success_message = None
+                st.session_state.load_sample_file_name = None
+        else:
+            st.session_state.last_error_message = f"Error loading the file '{name}'. Status code: {response.status_code}"
+            st.session_state.load_sample_file_name = None
+
+
 if st.session_state.m_achsen is not None:
     if st.session_state.success_message:
         st.success(st.session_state.success_message)
@@ -673,3 +640,11 @@ else:
             mime="text/plain",
             help=f"Download the list of generated block values in {st.session_state.output_unit_for_download.upper()}."
         )
+
+# --- Section: Support This Project ---
+st.markdown("---")
+st.subheader("Support this Project")
+st.write("If you find this application useful, consider supporting its development!")
+DONATION_LINK = 'https://www.buymeacoffee.com//ztilleditsz'
+st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
+st.markdown("Thank you for your support! ❤️")
