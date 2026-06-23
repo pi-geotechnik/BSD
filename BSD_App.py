@@ -183,8 +183,8 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
         c2, loc2, scale2 = stats.weibull_min.fit(m_axes)
         X2 = np.linspace(stats.weibull_min.ppf(0.001, c2, loc=loc2, scale=scale2), 
                          stats.weibull_min.ppf(0.999, c2, loc=loc2, scale=scale2), len(m_axes))
-        ax4.plot(X2, stats.weibull_min.pdf(X2, c2, loc=loc2, scale=scale2), '#FF8C00', label='weibull_min pdf')
-        ax5.plot(X2, stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#FF8C00', label='weibull_min cdf')
+        ax4.plot(X2, stats.weibull_min.pdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min pdf')
+        ax5.plot(X2, stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min cdf')
         st.session_state.c2 = c2
         st.session_state.loc2 = loc2
         st.session_state.scale2 = scale2
