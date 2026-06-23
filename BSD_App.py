@@ -8,6 +8,7 @@
 # (c) Mariella Illeditsch, 2025
 # mariella.illeditsch@pi-geo.at
 # Adaption Mar 2026: Zeile 67: Runden der Volumina entfernt
+# Adaption Jun 2026: Adding Rosin-Rammler/Weibull_min
 #
 # --------------------------------------------------------------
 
@@ -176,6 +177,18 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
         st.session_state.a4 = a4
         st.session_state.loc4 = loc4
         st.session_state.scale4 = scale4
+        
+    if 'weibull_min' in selected_distributions:
+        # weibull_min = Rosin-Rammler
+        c2, loc2, scale2 = stats.weibull_min.fit(m_axes)
+        X2 = np.linspace(stats.weibull_min.ppf(0.001, c2, loc=loc2, scale=scale2), 
+                         stats.weibull_min.ppf(0.999, c2, loc=loc2, scale=scale2), len(m_axes))
+        ax4.plot(X2, stats.weibull_min.pdf(X2, c2, loc=loc2, scale=scale2), '#FF8C00', label='weibull_min pdf')
+        ax5.plot(X2, stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#FF8C00', label='weibull_min cdf')
+        st.session_state.c2 = c2
+        st.session_state.loc2 = loc2
+        st.session_state.scale2 = scale2
+    
     
     # Calculate histogram (counts and bins)
     counts, bins = np.histogram(m_axes, bins='auto', density=True)
@@ -472,14 +485,14 @@ else:
     st.pyplot(fig1)
 
     st.subheader("Fitting Probability Functions")
-    selected_dists = ['genexpon', 'expon', 'powerlaw'] 
+    selected_dists = ['genexpon', 'weibull_min', 'expon', 'powerlaw'] 
     
     fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists)
     st.pyplot(fig2)
 
     st.subheader("Tabular Comparison of Percentiles")
 
-    percentiles_to_show = [0, 25, 50, 75, 95, 96, 97, 98, 99, 100]
+    percentiles_to_show = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 96, 97, 98, 99, 100]
 
     # Check if all required parameters for fitting are in session_state
     required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4']
@@ -489,6 +502,8 @@ else:
             L1s = calculate_distribution_percentiles(stats.genexpon, percentiles_to_show, 
                                                     st.session_state.a1, st.session_state.b1, st.session_state.c1, 
                                                     st.session_state.loc1, st.session_state.scale1)
+            L2s = calculate_distribution_percenties(stats.weibull_min, percentiles_to_show,
+                                                    st.session_state.c2, st.session_state.loc2, st.session_state.scale2)        
             L3s = calculate_distribution_percentiles(stats.expon, percentiles_to_show, 
                                                     st.session_state.loc3, st.session_state.scale3)
             L4s = calculate_distribution_percentiles(stats.powerlaw, percentiles_to_show, 
@@ -497,19 +512,22 @@ else:
             # Ensure all percentiles are numpy arrays for easier cubic calculation
             upload_perz = np.array(np.percentile(st.session_state.m_achsen, percentiles_to_show))
             L1s = np.array(L1s)
+            L2s = np.array(L2s)
             L3s = np.array(L3s)
             L4s = np.array(L4s)
 
             upload_perz3 = upload_perz**3
             L1s3 = L1s**3
+            L2s3 = L2s**3
             L3s3 = L3s**3
             L4s3 = L4s**3
             
             df1 = pd.DataFrame({
                 "percentile": [str(p) for p in percentiles_to_show],
                 "sample [m³]": upload_perz3,
-                "expon [m³]": L3s3,
                 "genexpon [m³]": L1s3,
+                "weibull_min [m³]": L2s3,
+                "expon [m³]": L3s3,
                 "powerlaw [m³]": L4s3
             })
             
@@ -634,6 +652,9 @@ else:
                         params_for_rvs = (st.session_state.a1, st.session_state.b1, st.session_state.c1, 
                                           st.session_state.loc1, st.session_state.scale1)
                         dist_function = stats.genexpon
+                    elif selected_download_distribution == 'weibull_min':
+                        params_for_rvs = (st.session_state.c2, st.session_state.loc2, st.session_state.scale2)
+                        dist_function = stats.weibull_min
                     elif selected_download_distribution == 'expon':
                         params_for_rvs = (st.session_state.loc3, st.session_state.scale3)
                         dist_function = stats.expon
