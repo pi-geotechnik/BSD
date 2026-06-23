@@ -8,7 +8,6 @@
 # (c) Mariella Illeditsch, 2025
 # mariella.illeditsch@pi-geo.at
 # Adaption Mar 2026: Zeile 67: Runden der Volumina entfernt
-# Adaption Jun 2026: Adding Rosin-Rammler/Weibull and Gates-Gaudin-Schuhmann (GGS) functions
 #
 # --------------------------------------------------------------
 
@@ -454,7 +453,7 @@ if st.session_state.last_error_message:
     # Clear the error message after showing it once
     st.session_state.last_error_message = None
 
-if st.session_state.m_achsen is None:
+if st.session_state.m_achsen is None or len(st.session_state.m_achsen) == 0:
     st.info("Please select a unit in the left sidebar and upload a sample file or upload your own file to get started.")
 else:
     # Display file information
