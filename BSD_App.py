@@ -502,7 +502,7 @@ else:
             L1s = calculate_distribution_percentiles(stats.genexpon, percentiles_to_show, 
                                                     st.session_state.a1, st.session_state.b1, st.session_state.c1, 
                                                     st.session_state.loc1, st.session_state.scale1)
-            L2s = calculate_distribution_percenties(stats.weibull_min, percentiles_to_show,
+            L2s = calculate_distribution_percentiles(stats.weibull_min, percentiles_to_show,
                                                     st.session_state.c2, st.session_state.loc2, st.session_state.scale2)        
             L3s = calculate_distribution_percentiles(stats.expon, percentiles_to_show, 
                                                     st.session_state.loc3, st.session_state.scale3)
