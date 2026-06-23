@@ -491,9 +491,21 @@ else:
     st.pyplot(fig2)
 
     st.subheader("Tabular Comparison of Percentiles")
+    
+    # 1. Umschalter (Radio-Buttons) hinzufügen
+    table_view = st.radio(
+        "Select table view:",
+        ("Compact", "Full"),
+        horizontal=True # Legt die Buttons schön nebeneinander
+    )
 
-    percentiles_to_show = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 96, 97, 98, 99, 100]
-
+    # 2. Die Perzentil-Listen je nach Auswahl definieren
+    if table_view == "Compact":
+        percentiles_to_show = [0, 25, 50, 75, 95, 96, 97, 98, 100]
+    else:
+        # Full: 0, 5, 10, ..., 95, 96, 97, 98, 99, 100
+        percentiles_to_show = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 96, 97, 98, 99, 100]
+        
     # Check if all required parameters for fitting are in session_state
     required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4']
     if all(param in st.session_state for param in required_params):
@@ -533,7 +545,7 @@ else:
             
             # CSS-Styling for specific rows (5th to 8th row bold)
             def highlight_rows(s):
-                is_bold = ['font-weight: bold' if i in [4, 5, 6, 7] else '' for i in range(len(s))]
+                is_bold = ['font-weight: bold' if i in [19, 20, 21, 22] else '' for i in range(len(s))]
                 return is_bold
             
             styled_df = df1.style.apply(highlight_rows, axis=0) 
