@@ -311,7 +311,7 @@ with st.sidebar:
         st.session_state.uploaded_filename = None 
         st.session_state.last_error_message = None # Auch Fehlermeldung löschen bei Einheitswechsel
         st.session_state.file_source = None # Hinzugefügt: file_source löschen bei Einheitswechsel
-        #st.rerun() # Rerun to clear plots immediately
+        st.rerun() # Rerun to clear plots immediately
 
     # Density input only if mass is selected
     density_input = None
@@ -349,14 +349,14 @@ with st.sidebar:
                         st.session_state.success_message = f"The sample file '{name}' was loaded successfully."
                         # Clear any previous error messages
                         st.session_state.last_error_message = None
-                        #st.rerun()
+                        st.rerun()
                     else:
                         st.session_state.last_error_message = f"Error processing the sample file '{name}'."
                         st.session_state.success_message = None
-                        #st.rerun()
+                        st.rerun()
                 else:
                     st.session_state.last_error_message = f"Error loading the file '{name}'. Status code: {response.status_code}"
-                    #st.rerun()
+                    st.rerun()
 
     st.subheader("Upload Your Own File")
     uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
@@ -389,11 +389,11 @@ with st.sidebar:
                     st.session_state.success_message = "Your file was processed successfully."
                     # Clear any previous error messages
                     st.session_state.last_error_message = None
-                    #st.rerun()
+                    st.rerun()
                 else:
                     st.session_state.last_error_message = "File could not be processed. Please check the format and decimal separator (use '.' instead of ',') and ensure the file contains valid numerical data."
                     st.session_state.success_message = None
-                    #st.rerun()
+                    st.rerun()
 
     # Check if user file was removed (when uploader shows None but we still have user data)
     elif (uploaded_user_file is None and 
@@ -402,7 +402,7 @@ with st.sidebar:
         # User removed the uploaded file, clear all data
         clear_all_data()
         st.info("File removed. Please upload a new file or select a sample file.")
-        #st.rerun()
+        st.rerun()
         
     # Dieser elif-Block ist wichtig, falls die Einheit geändert wird, nachdem eine Datei geladen wurde.
     elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
@@ -419,10 +419,10 @@ with st.sidebar:
             st.session_state.m_achsen = m_axes
             st.session_state.volumes_m3 = volumes_m3
             st.session_state.block_count = block_count
-            #st.rerun()
+            st.rerun()
         else:
             st.session_state.last_error_message = "File could not be re-processed after unit change. Please check format."
-            #st.rerun()
+            st.rerun()
             
     st.subheader("Support this Project")
     st.write("If you find this application useful, consider supporting its development!")
@@ -453,7 +453,7 @@ if st.session_state.last_error_message:
     # Clear the error message after showing it once
     st.session_state.last_error_message = None
 
-if st.session_state.m_achsen is None or len(st.session_state.m_achsen) == 0:
+if st.session_state.m_achsen is None:
     st.info("Please select a unit in the left sidebar and upload a sample file or upload your own file to get started.")
 else:
     # Display file information
