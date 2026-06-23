@@ -250,7 +250,7 @@ def clear_all_data():
     keys_to_clear = [
         'm_achsen', 'volumes_m3', 'uploaded_file_content', 'uploaded_filename',
         'block_count', 'file_source', 'success_message', 'last_error_message',
-        'a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4'
+        'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 'loc3', 'scale3', 'a4', 'loc4', 'scale4'
     ]
     for key in keys_to_clear:
         if key in st.session_state:
@@ -568,6 +568,9 @@ else:
     # Check if parameters for genexpon are available
     if 'a1' in st.session_state and 'b1' in st.session_state and 'c1' in st.session_state and 'loc1' in st.session_state and 'scale1' in st.session_state:
         available_dists_for_download.append('genexpon')
+    # Check if parameters for weibull_min are available
+    if 'c2' in st.session_state and 'loc2' in st.session_state and 'scale2' in st.session_state:
+        available_dists_for_download.append('weibull_min')
     # Check if parameters for expon are available
     if 'loc3' in st.session_state and 'scale3' in st.session_state:
         available_dists_for_download.append('expon')
