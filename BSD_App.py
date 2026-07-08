@@ -259,7 +259,7 @@ def clear_all_data():
 # --- Streamlit App Layout ---
 
 # Header und Info
-#st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
+st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
 st.title("Block Size Distribution by Curve Fitting")
 st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
 with st.expander("ℹ️ About This Project"):
