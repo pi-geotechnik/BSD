@@ -235,7 +235,7 @@ st.title("Block Size Distribution by Curve Fitting")
 st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
-    Version 2.2, July 2026
+    Version 2.3, July 2026
     This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at TU Wien (2023). 
     Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4).
     ### 🧗‍♀️ The Challenge
