@@ -4,11 +4,12 @@
 # App for visualising a block size distribution and fitting a probability function
 # --------------------------------------------------------------
 #
-# Code and App version 1, Mar 2025
+# Code and App Version 1, Mar 2025
 # (c) Mariella Illeditsch, 2025
 # mariella.illeditsch@pi-geo.at
-# Adaption Mar 2026: Zeile 67: Runden der Volumina entfernt
-# Adaption Jun 2026: Adding Rosin-Rammler/Weibull_min
+# Version 2.1 Mar 2026: Zeile 67: Runden der Volumina entfernt
+# Version 2.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
+# Version 2.3 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
 #
 # --------------------------------------------------------------
 
@@ -17,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
+import base64
 import io
 from io import BytesIO
 from scipy import stats
@@ -36,13 +38,19 @@ st.markdown("""
     <style>
     /* Reduziert die Schriftgröße des Textes in st.info Boxen */
     div[data-testid="stInfo"] p {
-        font-size: smaller; /* Passt die Größe an. 1em ist die Standardtextgröße (wie Selectbox). 0.95em macht es leicht kleiner. */
-                          /* Du kannst auch 'smaller' oder einen spezifischen Pixelwert wie '14px' verwenden. */
+        font-size: smaller;
     }
-    /* Optional: Wenn du auch die Schriftgröße von st.subheader ändern möchtest, kommentiere dies aus und passe es an */
-    /* h3 {
-        font-size: 1.2em; /* Macht h3 kleiner als die Standardgröße (normalerweise 1.5em) */
-    } */
+    /* Stil für die Jährlichkeitsergebnisse */
+    .annual_result {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #004280; /* Streamlit Info-Text-Blau */
+        margin-left: 15px;
+    }
+    .result-label {
+        font-weight: normal;
+        color: #495057; /* Dunkelgrau */
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -51,7 +59,6 @@ LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
 
 # Beispiel-Datei URLs auf GitHub
 EXAMPLE_FILES = {
-    #"Kalk": "https://github.com/pi-geotechnik/Blockverteilung/raw/main/blocklist_dachsteinkalk_m3.txt", # Auskommentiert, da nicht in der Original-App verwendet
     "Rauwacke": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_mils_rauwacke_m3.txt",
     "Orthogneiss": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_rossatz_orthogneis_m3.txt",
     "Slate": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_vals_schiefer_m3.txt"
@@ -65,7 +72,7 @@ def calculate_mass_in_tonnes(volume_m3, density_kg_m3):
 
 def calculate_cubic_root(v):
     """Calculates the cubic root of a volume (m³) to get block axis (m)."""
-    return (v ** (1/3)) #round((v ** (1/3),2) Runden entfernt
+    return (v ** (1/3))
 
 def visualize_histograms_m3_and_m(m_values, m3_values):
     """Visualizes histograms for block volumes (m³) and block axes (m)."""
@@ -93,29 +100,20 @@ def calculate_and_visualize_percentiles(m_axes):
 
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
 
-    # Histogram of the Probability density
     ax1.hist(m_axes, density=True, bins='auto', histtype='stepfilled', color='tab:blue', alpha=0.3, label='upload pdf')
-    
-    # CDF on normal scale
     ax2.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
-    
-    # CDF on Log-scale
     ax3.plot(percentiles_m_axes, steps, lw=2.0, color='tab:blue', alpha=0.7, label='upload cdf')
 
-    # Axis labels
     ax1.set_xlim(left=None, right=None)
     ax1.set_xlabel('Block axis a [m]', fontsize=14)
     ax1.set_ylabel('Probability density f(a)', fontsize=14)
-
     ax2.set_xlim(left=None, right=None)
     ax2.set_xlabel('Block axis a [m]', fontsize=14)
     ax2.set_ylabel('Cumulative probability F(a)', fontsize=14)
-
-    ax3.set_xscale('log')
+    from matplotlib.ticker import FormatStrFormatter
+    ax3.xaxis.set_major_formatter(FormatStrFormatter('%g')) 
     ax3.set_xlabel('Block axis a [m] (log)', fontsize=14)
     ax3.set_ylabel('Cumulative probability F(a)', fontsize=14)
-
-    # Legends
     ax1.legend(loc='best', frameon=False)
     ax2.legend(loc='best', frameon=False)
     ax3.legend(loc='best', frameon=False)
@@ -130,77 +128,46 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     """
     fig, (ax4, ax5) = plt.subplots(nrows=1, ncols=2, figsize=(12, 4))
 
-    # Histogram of m_axes
-    ax4.hist(m_axes, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3, 
-             label='upload pdf')
-        
-    # CDF for m_axes (cumulative distribution)
+    ax4.hist(m_axes, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3, label='upload pdf')
     steps = np.linspace(0.01, 1.00, num=100)
     percentiles_m_axes = np.quantile(m_axes, steps)
     ax5.plot(percentiles_m_axes, steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload cdf')
     
-    # Cumulative Distributions and CDF Calculations
     if 'expon' in selected_distributions:
         loc3, scale3 = stats.expon.fit(m_axes)
-        X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), 
-                         stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
+        X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
         ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
         ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
-        
-        # Save parameters to session_state
-        st.session_state.loc3 = loc3
-        st.session_state.scale3 = scale3
+        st.session_state.loc3, st.session_state.scale3 = loc3, scale3
 
     if 'genexpon' in selected_distributions:
         a1, b1, c1, loc1, scale1 = stats.genexpon.fit(m_axes)
-        # KORRIGIERTE ZEILE: Das np.linspace war unvollständig
-        X1 = np.linspace(stats.genexpon.ppf(0.001, a1, b1, c1, loc=loc1, scale=scale1), 
-                         stats.genexpon.ppf(0.999, a1, b1, c1, loc=loc1, scale=scale1), len(m_axes))
+        X1 = np.linspace(stats.genexpon.ppf(0.001, a1, b1, c1, loc=loc1, scale=scale1), stats.genexpon.ppf(0.999, a1, b1, c1, loc=loc1, scale=scale1), len(m_axes))
         ax4.plot(X1, stats.genexpon.pdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon pdf')
         ax5.plot(X1, stats.genexpon.cdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon cdf')
-
-        # Save parameters to session_state
-        st.session_state.a1 = a1
-        st.session_state.b1 = b1
-        st.session_state.c1 = c1
-        st.session_state.loc1 = loc1
-        st.session_state.scale1 = scale1
+        st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1 = a1, b1, c1, loc1, scale1
                 
-    if 'powerlaw' in selected_distributions:
-        a4, loc4, scale4 = stats.powerlaw.fit(m_axes)
-        X4 = np.linspace(stats.powerlaw.ppf(0.001, a4, loc=loc4, scale=scale4), 
-                         stats.powerlaw.ppf(0.999, a4, loc=loc4, scale=scale4), len(m_axes))
-        ax4.plot(X4, stats.powerlaw.pdf(X4, a4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='powerlaw pdf')
-        ax5.plot(X4, stats.powerlaw.cdf(X4, a4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='powerlaw cdf')
-
-        # Save parameters to session_state
-        st.session_state.a4 = a4
-        st.session_state.loc4 = loc4
-        st.session_state.scale4 = scale4
+    if 'lognorm' in selected_distributions:
+        s4, loc4, scale4 = stats.lognorm.fit(m_axes)
+        X4 = np.linspace(stats.lognorm.ppf(0.001, s4, loc=loc4, scale=scale4), stats.lognorm.ppf(0.999, s4, loc=loc4, scale=scale4), len(m_axes))
+        ax4.plot(X4, stats.lognorm.pdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm pdf')
+        ax5.plot(X4, stats.lognorm.cdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm cdf')
+        st.session_state.s4, st.session_state.loc4, st.session_state.scale4 = s4, loc4, scale4
         
     if 'weibull_min' in selected_distributions:
-        # weibull_min = Rosin-Rammler
         c2, loc2, scale2 = stats.weibull_min.fit(m_axes)
-        X2 = np.linspace(stats.weibull_min.ppf(0.001, c2, loc=loc2, scale=scale2), 
-                         stats.weibull_min.ppf(0.999, c2, loc=loc2, scale=scale2), len(m_axes))
+        X2 = np.linspace(stats.weibull_min.ppf(0.001, c2, loc=loc2, scale=scale2), stats.weibull_min.ppf(0.999, c2, loc=loc2, scale=scale2), len(m_axes))
         ax4.plot(X2, stats.weibull_min.pdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min pdf')
         ax5.plot(X2, stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min cdf')
-        st.session_state.c2 = c2
-        st.session_state.loc2 = loc2
-        st.session_state.scale2 = scale2
+        st.session_state.c2, st.session_state.loc2, st.session_state.scale2 = c2, loc2, scale2
     
-    
-    # Calculate histogram (counts and bins)
     counts, bins = np.histogram(m_axes, bins='auto', density=True)
-    # Find the maximum value of the histogram
     max_y_value = max(counts)
 
-    # Axes for the plot
     ax4.legend(loc='best', frameon=False)
     ax4.set_ylim(0, max_y_value * 1.1)
     ax4.set_xlabel('Block axis a [m]', fontsize=12)
     ax4.set_ylabel('Probability density f(a)', fontsize=12)
-    
     ax5.legend(loc='best', frameon=False)
     ax5.set_xscale('log')
     ax5.set_xlabel('Block axis a [m] (log)', fontsize=12)
@@ -216,33 +183,21 @@ def calculate_distribution_percentiles(distribution, percentiles, *params):
 def process_uploaded_data(file_content, unit_type, density_kg_m3=None):
     """Processes uploaded file content, converts units, and calculates m_achsen."""
     try:
-        # Replace commas with dots for decimal separator and filter out empty lines or non-numeric values
-        values_list = [
-            float(val.strip().replace(',', '.')) 
-            for val in file_content.splitlines() 
-            if val.strip().replace(',', '.', 1).replace('.', '', 1).isdigit() or (val.strip().replace(',', '.', 1).startswith('-') and val.strip().replace(',', '.', 1)[1:].replace('.', '', 1).isdigit())
-        ]
-        
-        # Filter values to be non-negative
-        values = [wert for wert in values_list if wert >= 0.000]
-        
-        # Sort values in ascending order
-        values.sort()
+        values_list = [float(val.strip().replace(',', '.')) for val in file_content.splitlines() if val.strip()]
+        values = sorted([wert for wert in values_list if wert > 0.000])
         
         if unit_type == "Volume in m³":
-            m_axes = [calculate_cubic_root(val) for val in values]
             volumes_m3 = values
         elif unit_type == "Mass in t (density required)":
-            if density_kg_m3 is None:
-                st.error("Density is required for mass input.")
+            if not density_kg_m3 or density_kg_m3 <= 0:
+                st.error("Density must be a positive number for mass input.")
                 return None, None, None
             volumes_m3 = [val * 1000 / density_kg_m3 for val in values]
-            m_axes = [calculate_cubic_root(val) for val in volumes_m3]
         
+        m_axes = [calculate_cubic_root(val) for val in volumes_m3]
         return m_axes, volumes_m3, len(values)
-    except Exception as e:
-        # Fehlermeldung präziser machen
-        st.error(f"Error processing data: {e}. Please ensure numbers use a dot '.' as a decimal separator and the file contains valid numerical data.")
+    except (ValueError, TypeError) as e:
+        st.error(f"Error processing data: {e}. Please ensure the file contains only valid numbers and uses a dot '.' as a decimal separator.")
         return None, None, None
 
 def clear_all_data():
@@ -250,318 +205,265 @@ def clear_all_data():
     keys_to_clear = [
         'm_achsen', 'volumes_m3', 'uploaded_file_content', 'uploaded_filename',
         'block_count', 'file_source', 'success_message', 'last_error_message',
-        'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 'loc3', 'scale3', 'a4', 'loc4', 'scale4'
+        'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 
+        'loc3', 'scale3', 's4', 'loc4', 'scale4',
+        'annual_results' # Auch die Jährlichkeits-Ergebnisse löschen
     ]
     for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
 
 # --- Streamlit App Layout ---
+try:
+    # Bild einlesen und in Base64 umwandeln
+    with open(LOGO_PATH, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
 
-# Header und Info
-st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
+    # HTML mit Link und eingebettetem Bild erzeugen
+    st.markdown(
+        f"""
+        <a href="https://pi-geo.at/" target="_blank">
+            <img src="data:image/png;base64,{encoded_string}" width="300" style="margin-bottom: 15px;">
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
+except FileNotFoundError:
+    st.warning(f"Logo file not found: {LOGO_PATH}")
+
 st.title("Block Size Distribution by Curve Fitting")
 st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
-    Version 2.1, June 2025
-
-    This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at the TU Wien in the year 2023.
-
-    Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021?msockid=0f6932b2fb8d63ee018527a8fa6a62a9), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4)
-
-    As worked out in the above refereces, designing rock fall protection measures with only one *design block* may result in unreliable trajectories (i.e. kinetic energies, bounce heights and runout).
-    Block size distributions (BSDs) derived from debris fields are very subjective.
-    Linking the percentiles of such BSDs, that define the size of the design block (95th-98th, according to ONR24810), with the frequency of rockfall events is not meaningful.
-
-    **This application visualizes block size distributions, fits distribution functions to them and provides block lists of the fitted distribution for rockfall simulations (e.g. with [THROW](https://pigeotechnik.pythonanywhere.com/)).
-    It offers the determination of more meaningful BSDs, which is also possible with a limited number of block size measurements.
-    This provides more certain, accurate, verifiable, holistic, and objective results for more meaningful rockfall hazard assessment.**
-
-    Fitted distributions often result in infinite block sizes or dust particle sizes, which are not useful for rockfall modelling.
-    In the design of rockfall protection measures and hazard analyses, rockfall frequencies (magnitude to frequency relations M/F; Corominas et al. (2018)) and return periods play an important role.
-    This requires knowledge of the events on the one hand and the definition of a worst-case scenario on the other.
-    **Expert opinion is required!**
-    Based on a defined worst-case scenario (with a certain annuality), events/block sizes with higher return periods may be neglected (cut off).
-    At the lower end, simulation programs are generally not able to realistically calculate trajectories of very small blocks. Minimum block sizes of 0.025 m³ are recommended.
-
-    This app is an open source project.
+    Version 2.2, July 2026
+    This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at TU Wien (2023). 
+    Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4).
+    ### 🧗‍♀️ The Challenge
+    As demonstrated in the research above, designing rockfall protection measures based on a single *design block* often results in unreliable trajectories (i.e., kinetic energies, bounce heights, and runout distances). Furthermore, Block Size Distributions (BSDs) derived purely from debris fields are highly subjective. Linking the percentiles of such field-derived BSDs (e.g., the 95th-98th percentile according to ONR 24810) directly to the frequency of rockfall events is scientifically problematic and physically flawed.
+    ### 💡 The Solution
+    This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended!).
+    * **Curve Fitting & Block Lists:** The app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), and generates robust block lists (intensity-magnitude-frequencies) for rockfall simulations (e.g., using THROW).
+    * **Return Period Analysis (annuality):** It bridges the gap between spatial geometry and time. By defining a known worst-case anchor event, the geometrical distribution is translated into temporal return periods. This allows for the exact calculation of design blocks for specific annualities (e.g., 30, 100, and 300-year events).
+    ### ⚠️ Practical Application & Expert Judgment
+    Fitted statistical distributions range mathematically from dust particles to infinite rock masses, which is not useful for numerical modeling. **Expert opinion is required** to define meaningful boundaries:
+    * **Upper Cut-off (Worst-Case):** Based on the annuality analysis, unrealistic extreme events with return periods far beyond the structure's lifespan can be neglected.
+    * **Lower Cut-off:** Simulation programs generally struggle to realistically calculate the trajectories of very small blocks. Therefore, a reasonable minimum block size should be defined by the user depending on the simulation tool.
+    
+    *This application is an open-source project.*
     """)
 
 # --- Sidebar for user input ---
 with st.sidebar:
-    #st.image(Image.open(LOGO_PATH), caption="https://pi-geo.at/", width=300)
     st.header("Input Data")
-
-    # Initialize session state variables if they don't exist
-    if 'einheit' not in st.session_state:
-        st.session_state.einheit = "Volume in m³"
-    if 'm_achsen' not in st.session_state:
-        st.session_state.m_achsen = None
-    if 'volumes_m3' not in st.session_state:
-        st.session_state.volumes_m3 = None
-    if 'uploaded_file_content' not in st.session_state: 
-        st.session_state.uploaded_file_content = None
-    if 'uploaded_filename' not in st.session_state: 
-        st.session_state.uploaded_filename = None
-    if 'block_count' not in st.session_state: 
-        st.session_state.block_count = None
-    if 'file_source' not in st.session_state: 
-        st.session_state.file_source = None  # 'sample' or 'user'
-    if 'success_message' not in st.session_state: 
-        st.session_state.success_message = None
-    if 'last_error_message' not in st.session_state:
-        st.session_state.last_error_message = None
+    
+    # KORREKTUR 1: Den uploader_key initialisieren
+    if 'uploader_key' not in st.session_state:
+        st.session_state.uploader_key = 0
+    
+    # Session state Initialisierung (unverändert)
+    if 'einheit' not in st.session_state: st.session_state.einheit = "Volume in m³"
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
 
-    # Check if the unit has changed
     if st.session_state.einheit != selected_unit:
+        clear_all_data() # Löscht alle Daten, inkl. annual_results
         st.session_state.einheit = selected_unit
-        # Clear all data if unit changes, forcing re-upload
-        st.session_state.m_achsen = None
-        st.session_state.volumes_m3 = None
-        st.session_state.uploaded_file_content = None 
-        st.session_state.uploaded_filename = None 
-        st.session_state.last_error_message = None # Auch Fehlermeldung löschen bei Einheitswechsel
-        st.session_state.file_source = None # Hinzugefügt: file_source löschen bei Einheitswechsel
-        st.rerun() # Rerun to clear plots immediately
+        st.rerun()
 
-    # Density input only if mass is selected
     density_input = None
     if selected_unit == "Mass in t (density required)":
         density_input = st.number_input("Enter the density in kg/m³:", min_value=250, value=2650, step=50)
-        if density_input <= 0:
-            st.error("Density must be equal to or greater than 250 kg/m³.")
-            density_input = None
 
     st.subheader("Load Example Files")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
+            # KORREKTUR 2: uploader_key erhöhen, um das Upload-Widget zurückzusetzen
+            st.session_state.uploader_key += 1
+            clear_all_data() # Alle alten Daten löschen
+            
             with st.spinner(f"Loading '{name}'..."):
-                # Clear existing data before loading new example
-                clear_all_data()
-
-                response = requests.get(url)
-                if response.status_code == 200:
+                try:
+                    response = requests.get(url)
+                    response.raise_for_status()
                     example_file_content = response.content.decode("utf-8")
-                    
-                    # Process the data
-                    m_axes, volumes_m3, block_count = process_uploaded_data(
-                        example_file_content,
-                        selected_unit,
-                        density_input
-                    )
-                    
+                    m_axes, volumes_m3, block_count = process_uploaded_data(example_file_content, selected_unit, density_input)
                     if m_axes is not None:
-                        st.session_state.uploaded_file_content = example_file_content
-                        st.session_state.uploaded_filename = f"sample_{name}.txt"
-                        st.session_state.m_achsen = m_axes
-                        st.session_state.volumes_m3 = volumes_m3
-                        st.session_state.block_count = block_count
-                        st.session_state.file_source = 'sample'
-                        st.session_state.success_message = f"The sample file '{name}' was loaded successfully."
-                        # Clear any previous error messages
-                        st.session_state.last_error_message = None
-                        st.rerun()
+                        st.session_state.update({
+                            'uploaded_file_content': example_file_content, 'uploaded_filename': f"sample_{name}.txt",
+                            'm_achsen': m_axes, 'volumes_m3': volumes_m3, 'block_count': block_count,
+                            'file_source': 'sample', 'success_message': f"The sample file '{name}' was loaded successfully."
+                        })
                     else:
-                        st.session_state.last_error_message = f"Error processing the sample file '{name}'."
-                        st.session_state.success_message = None
-                        st.rerun()
-                else:
-                    st.session_state.last_error_message = f"Error loading the file '{name}'. Status code: {response.status_code}"
-                    st.rerun()
+                        st.session_state['last_error_message'] = f"Error processing the sample file '{name}'."
+                except requests.exceptions.RequestException as e:
+                    st.session_state['last_error_message'] = f"Error loading file from URL: {e}"
+            st.rerun()
 
     st.subheader("Upload Your Own File")
-    uploaded_user_file = st.file_uploader(f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:", type=["txt"])
+    # KORREKTUR 3: Den uploader mit dem Schlüssel verknüpfen
+    uploaded_user_file = st.file_uploader(
+        f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:",
+        type=["txt"],
+        key=f"uploader_{st.session_state.uploader_key}"
+    )
     st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
 
-    if uploaded_user_file is not None:
-        # Check if this is a new file (different from what's currently loaded)
-        if (st.session_state.uploaded_filename != uploaded_user_file.name or 
-            st.session_state.file_source != 'user'):
+    if uploaded_user_file:
+        # Prüfen, ob es eine NEUE Datei ist
+        if st.session_state.get('uploaded_filename') != uploaded_user_file.name:
+            clear_all_data()
+            
+            # WICHTIG: Sofort den Namen merken, um die Endlosschleife zu stoppen!
+            st.session_state.uploaded_filename = uploaded_user_file.name
+            st.session_state.file_source = 'user'
             
             with st.spinner("Processing uploaded file..."):
-                # Clear existing data before processing new user file
-                clear_all_data()
-                
                 file_content = uploaded_user_file.read().decode("utf-8")
-                
-                m_axes, volumes_m3, block_count = process_uploaded_data(
-                    file_content,
-                    selected_unit,
-                    density_input
-                )
+                m_axes, volumes_m3, block_count = process_uploaded_data(file_content, selected_unit, density_input)
                 
                 if m_axes is not None:
-                    st.session_state.uploaded_file_content = file_content
-                    st.session_state.uploaded_filename = uploaded_user_file.name
                     st.session_state.m_achsen = m_axes
                     st.session_state.volumes_m3 = volumes_m3
                     st.session_state.block_count = block_count
-                    st.session_state.file_source = 'user'
+                    st.session_state.uploaded_file_content = file_content
                     st.session_state.success_message = "Your file was processed successfully."
-                    # Clear any previous error messages
-                    st.session_state.last_error_message = None
-                    st.rerun()
                 else:
-                    st.session_state.last_error_message = "File could not be processed. Please check the format and decimal separator (use '.' instead of ',') and ensure the file contains valid numerical data."
-                    st.session_state.success_message = None
-                    st.rerun()
+                    st.session_state.last_error_message = "File could not be processed. Please check format and content."
+            
+            st.rerun() # Führt nun nur noch EINMAL aus
 
-    # Check if user file was removed (when uploader shows None but we still have user data)
-    elif (uploaded_user_file is None and 
-        st.session_state.file_source == 'user' and 
-        st.session_state.m_achsen is not None):
-        # User removed the uploaded file, clear all data
+    # Falls der Nutzer das kleine 'X' im Uploader klickt
+    elif st.session_state.get('file_source') == 'user':
         clear_all_data()
         st.info("File removed. Please upload a new file or select a sample file.")
         st.rerun()
-        
-    # Dieser elif-Block ist wichtig, falls die Einheit geändert wird, nachdem eine Datei geladen wurde.
-    elif 'uploaded_file_content' in st.session_state and st.session_state.uploaded_file_content is not None and st.session_state.m_achsen is None:
-        st.info("File needs to be re-processed due to unit change or initial load.")
-        st.session_state.last_error_message = None
 
-        m_axes, volumes_m3, block_count = process_uploaded_data(
-            st.session_state.uploaded_file_content,
-            selected_unit,
-            density_input
-        )
-        
-        if m_axes is not None:
-            st.session_state.m_achsen = m_axes
-            st.session_state.volumes_m3 = volumes_m3
-            st.session_state.block_count = block_count
-            st.rerun()
-        else:
-            st.session_state.last_error_message = "File could not be re-processed after unit change. Please check format."
-            st.rerun()
-            
     st.subheader("Support this Project")
-    st.write("If you find this application useful, consider supporting its development!")
-
-    # Dein tatsächlicher Spenden-Link hier einfügen
-    DONATION_LINK = 'https://www.buymeacoffee.com//ztilleditsz'
-
-    st.link_button("Buy me a coffee ☕", url=DONATION_LINK)
-    # Oder für PayPal:
-    # st.link_button("Donate via PayPal 🙏", url="https://paypal.me/deinusername")
-
+    st.link_button("Buy me a coffee ☕", url='https://www.buymeacoffee.com//ztilleditsz')
     st.markdown("Thank you for your support! ❤️")
 
-
-
 # --- Main Content Area ---
-# Clear old messages when new data is loaded
-if st.session_state.m_achsen is not None:
-    # Only show success message if it exists
-    if st.session_state.success_message:
-        st.success(st.session_state.success_message)
-        # Clear the message after showing it once
-        st.session_state.success_message = None
+if st.session_state.get('success_message'):
+    st.success(st.session_state.get('success_message'))
+    st.session_state.success_message = None
 
-# Display error message
-if st.session_state.last_error_message:
-    st.error(st.session_state.last_error_message)
-    # Clear the error message after showing it once
+if st.session_state.get('last_error_message'):
+    st.error(st.session_state.get('last_error_message'))
     st.session_state.last_error_message = None
 
-if st.session_state.m_achsen is None:
-    st.info("Please select a unit in the left sidebar and upload a sample file or upload your own file to get started.")
+if not st.session_state.get('m_achsen'):
+    st.info("Please select a unit in the left sidebar and load a sample file or upload your own file to get started.")
 else:
+    # Alle nachfolgenden Berechnungen und Anzeigen
+    # ... (Der Rest Ihres Codes für die Hauptseite bleibt unverändert) ...
+    m_achsen = st.session_state['m_achsen']
+
     # Display file information
-    if st.session_state.uploaded_filename and st.session_state.block_count is not None:
-        st.subheader(f"File Information:")
+    if st.session_state.get('uploaded_filename') and st.session_state.get('block_count') is not None:
+        st.header("📂 1. Input Data & Diagnostics")
+        st.subheader("File Information")
         st.write(f"**Filename:** {st.session_state.uploaded_filename}")
         st.write(f"**Number of blocks:** {st.session_state.block_count}")
         
         # Display file content
-        if st.session_state.uploaded_file_content:
-            st.subheader(f"Contents of {st.session_state.uploaded_filename}:")
-            st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
+        if st.session_state.get('uploaded_file_content'):
+            with st.expander(f"Show Contents of {st.session_state.uploaded_filename}"):
+                 st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
 
+    st.divider() # <--- Fügt eine feine Trennlinie ein!
+    st.header("📊 2. Statistical Analysis & Distribution Fitting")
     st.subheader("Visualization of Probability Distribution")
     fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen)
     st.pyplot(fig1)
 
     st.subheader("Fitting Probability Functions")
-    selected_dists = ['genexpon', 'weibull_min', 'expon', 'powerlaw'] 
+    selected_dists = ['genexpon', 'weibull_min', 'expon', 'lognorm'] 
     
     fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists)
     st.pyplot(fig2)
 
     st.subheader("Tabular Comparison of Percentiles")
     
-    # 1. Umschalter (Radio-Buttons) hinzufügen
-    table_view = st.radio(
-        "Select table view:",
-        ("Compact", "Full"),
-        horizontal=True # Legt die Buttons schön nebeneinander
-    )
-
-    # 2. Die Perzentil-Listen je nach Auswahl definieren
-    if table_view == "Compact":
-        percentiles_to_show = [0, 25, 50, 75, 95, 96, 97, 98, 100]
-    else:
-        # Full: 0, 5, 10, ..., 95, 96, 97, 98, 99, 100
-        percentiles_to_show = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 96, 97, 98, 99, 100]
+    table_view = st.radio("Select table view:", ("Compact", "Full"), horizontal=True)
+    percentiles_to_show = [0, 25, 50, 75, 95, 96, 97, 98, 100] if table_view == "Compact" else list(range(0, 95, 5)) + list(range(95, 101))
         
-    # Check if all required parameters for fitting are in session_state
-    required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'loc3', 'scale3', 'a4', 'loc4', 'scale4']
+    required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 'loc3', 'scale3', 's4', 'loc4', 'scale4']
     if all(param in st.session_state for param in required_params):
-        try:
-            # Calculate percentiles for each distribution
-            L1s = calculate_distribution_percentiles(stats.genexpon, percentiles_to_show, 
-                                                    st.session_state.a1, st.session_state.b1, st.session_state.c1, 
-                                                    st.session_state.loc1, st.session_state.scale1)
-            L2s = calculate_distribution_percentiles(stats.weibull_min, percentiles_to_show,
-                                                    st.session_state.c2, st.session_state.loc2, st.session_state.scale2)        
-            L3s = calculate_distribution_percentiles(stats.expon, percentiles_to_show, 
-                                                    st.session_state.loc3, st.session_state.scale3)
-            L4s = calculate_distribution_percentiles(stats.powerlaw, percentiles_to_show, 
-                                                    st.session_state.a4, st.session_state.loc4, st.session_state.scale4)
-            
-            # Ensure all percentiles are numpy arrays for easier cubic calculation
-            upload_perz = np.array(np.percentile(st.session_state.m_achsen, percentiles_to_show))
-            L1s = np.array(L1s)
-            L2s = np.array(L2s)
-            L3s = np.array(L3s)
-            L4s = np.array(L4s)
-
-            upload_perz3 = upload_perz**3
-            L1s3 = L1s**3
-            L2s3 = L2s**3
-            L3s3 = L3s**3
-            L4s3 = L4s**3
-            
-            df1 = pd.DataFrame({
-                "percentile": [str(p) for p in percentiles_to_show],
-                "sample [m³]": upload_perz3,
-                "genexpon [m³]": L1s3,
-                "weibull_min [m³]": L2s3,
-                "expon [m³]": L3s3,
-                "powerlaw [m³]": L4s3
-            })
-            
-            # CSS-Styling for specific rows (5th to 8th row bold)
-            def highlight_rows(s):
-                is_bold = ['font-weight: bold' if i in [19, 20, 21, 22] else '' for i in range(len(s))]
-                return is_bold
-            
-            styled_df = df1.style.apply(highlight_rows, axis=0) 
-            styled_df = styled_df.hide(axis="index") 
-            st.dataframe(styled_df)
-            
-        except Exception as e:
-            st.error(f"Could not calculate percentiles: {e}. Please ensure data is loaded correctly and distributions are fitted.")
+        upload_perz = np.percentile(m_achsen, percentiles_to_show)
+        L1s = np.array(calculate_distribution_percentiles(stats.genexpon, percentiles_to_show, st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1))
+        L2s = np.array(calculate_distribution_percentiles(stats.weibull_min, percentiles_to_show, st.session_state.c2, st.session_state.loc2, st.session_state.scale2))
+        L3s = np.array(calculate_distribution_percentiles(stats.expon, percentiles_to_show, st.session_state.loc3, st.session_state.scale3))
+        L4s = np.array(calculate_distribution_percentiles(stats.lognorm, percentiles_to_show, st.session_state.s4, st.session_state.loc4, st.session_state.scale4))
+        
+        df1 = pd.DataFrame({
+            "percentile": [str(p) for p in percentiles_to_show],
+            "sample [m³]": upload_perz**3, "genexpon [m³]": L1s**3,
+            "weibull_min [m³]": L2s**3, "expon [m³]": L3s**3,
+            "lognorm [m³]": L4s**3
+        })
+        st.dataframe(df1.style.hide(axis="index")) # Ihre Original-Darstellung
     else:
-        st.info("Please load data and ensure distributions are fitted to see the percentile table.")
+        st.info("Fitting parameters not yet available. Results will be shown after data processing.")
+
+    st.divider() # <--- Trennlinie vor dem neuen Kapitel
+    st.header("⚙️ 3. Return Period Analysis & Export")
+    st.subheader("Return Period Analysis (Annual Exceedance Probability)")
+    st.markdown("Calibrate the fitted distribution using a known anchor event. This allows translating the geometric distribution into time-based return periods (annualities).")
+    st.markdown("Enter the size and return period of a known event (i.e., the largest observed block in a given timeframe) to calculate the corresponding block sizes for other return periods (30, 100, and 300 years).")
+
+    col_anchor1, col_anchor2 = st.columns(2)
+    anchor_block_axis = col_anchor1.number_input("Block axis of the anchor event [m]", min_value=0.1, value=1.25, step=0.1, format="%.2f")
+    anchor_return_period = col_anchor2.number_input("Return period of the anchor event [years]", min_value=1, value=30, step=10)
+
+    if st.button("Calculate Annualities"):
+        results_data = []
+        target_periods = [30, 100, 300]
+        
+        # Definition der Verteilungen und ihrer Parameter im session_state
+        distributions_dict = {
+            'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
+            'weibull_min': (stats.weibull_min, ['c2', 'loc2', 'scale2']),
+            'expon': (stats.expon, ['loc3', 'scale3']),
+            'lognorm': (stats.lognorm, ['s4', 'loc4', 'scale4'])
+        }
+        
+        for dist_name, (dist_func, param_keys) in distributions_dict.items():
+            if all(k in st.session_state for k in param_keys):
+                params = tuple(st.session_state[k] for k in param_keys)
+                
+                try:
+                    lambda_anchor = 1 / anchor_return_period
+                    exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
+                    
+                    if exceedance_prob_anchor <= 1e-9:
+                        row = {"Distribution": dist_name, "30-year [m]": "Error (prob≈0)", "100-year [m]": "Error (prob≈0)", "300-year [m]": "Error (prob≈0)"}
+                    else:
+                        lambda_0 = lambda_anchor / exceedance_prob_anchor
+                        row = {"Distribution": dist_name}
+                        
+                        for T_target in target_periods:
+                            target_exceedance_prob = (1 / T_target) / lambda_0
+                            target_cdf = 1 - np.clip(target_exceedance_prob, 0, 1)
+                            calc_val = dist_func.ppf(target_cdf, *params)
+                            row[f"{T_target}-year [m]"] = f"{calc_val:.3f}"
+                            
+                    results_data.append(row)
+                except Exception as e:
+                    row = {"Distribution": dist_name, "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
+                    results_data.append(row)
+        
+        if results_data:
+            st.session_state.annual_results_df = pd.DataFrame(results_data)
+
+    # Tabelle anzeigen, falls berechnet
+    if 'annual_results_df' in st.session_state:
+        st.markdown("##### Calculated Block Sizes for Target Return Periods:")
+        st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
+
         
         
-        
-# --- NEUER ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
-    st.subheader("Generate and download filtered distribution")
+# --- ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
+    st.subheader("Generate and Download Filtered Distribution")
     st.markdown("Select a fitted distribution and define the block axis range to generate a custom block list. You can then choose the output unit for download.")
 
     # Determine which distributions have fitted parameters and can be selected
@@ -575,9 +477,9 @@ else:
     # Check if parameters for expon are available
     if 'loc3' in st.session_state and 'scale3' in st.session_state:
         available_dists_for_download.append('expon')
-    # Check if parameters for powerlaw are available
-    if 'a4' in st.session_state and 'loc4' in st.session_state and 'scale4' in st.session_state:
-        available_dists_for_download.append('powerlaw')
+    # Check if parameters for lognorm are available
+    if 's4' in st.session_state and 'loc4' in st.session_state and 'scale4' in st.session_state:
+        available_dists_for_download.append('lognorm')
     
     selected_download_distribution = None
     if not available_dists_for_download:
@@ -594,11 +496,18 @@ else:
 
     # Display controls only if at least one distribution is available for generation
     if generation_possible_overall:
-        st.markdown(f"Generating blocks from the fitted **{selected_download_distribution}** distribution.")
+        st.info(f"Generating blocks from the fitted **{selected_download_distribution}** distribution.")
 
         # 2. Min/Max Block Axis Input (for block axis [m])
         st.markdown("Set the minimum and maximum **block axis** values for the generated distribution (values outside this range will be excluded).")
-        st.info("Note: the default min. value of 30 cm block axis corresponds to a volume of 0.027 m³; the default max. value of 1.5 m block axis corresponds to a volume of 3.375 m³ --- **Expert Opinion required!** ---")
+        st.info("""
+        * **Lower Cut-off:** Define a reasonable minimum block size based on the limitations of your target simulation tool.
+          * *The min. default value of 30 cm block axis corresponds to a volume of 0.027 m³.*
+        * **Upper Cut-off:** Use the return period analysis above to neglect extreme, highly improbable events, depending on your specific protection goals.
+          * *The max. default value of 1.25 m block axis corresponds to a volume of 1.95 m³.*
+        
+        **⚠️ Expert opinion is required to define meaningful boundaries**
+        """)
         col_min_max_1, col_min_max_2 = st.columns(2)
         with col_min_max_1:
             min_block_axis = st.number_input(
@@ -613,7 +522,7 @@ else:
             max_block_axis = st.number_input(
                 "Maximum Block Axis [m]", 
                 min_value=min_block_axis + 0.05, # Ensures max > min
-                value=1.50, # Default value
+                value=1.25, # Default value
                 step=0.05, 
                 format="%.2f", 
                 key="max_block_axis_input_download"                
@@ -636,10 +545,10 @@ else:
         )
 
         # 3. Output Type Selection
-        st.markdown("Choose the output unit for the generated block list (block mass (t) is required for THROW):")
+        st.markdown("Choose the output unit for the generated block list (block mass [t] is required for THROW):")
         selected_output_unit = st.radio(
             "Output Unit:",
-            ('Block Volume (m³)', 'Block Mass (t)'),
+            ('Block Volume [m³]', 'Block Mass [t]'),
             key="output_unit_selector"
         )
 
@@ -674,9 +583,9 @@ else:
                     elif selected_download_distribution == 'expon':
                         params_for_rvs = (st.session_state.loc3, st.session_state.scale3)
                         dist_function = stats.expon
-                    elif selected_download_distribution == 'powerlaw':
-                        params_for_rvs = (st.session_state.a4, st.session_state.loc4, st.session_state.scale4)
-                        dist_function = stats.powerlaw
+                    elif selected_download_distribution == 'lognorm':
+                        params_for_rvs = (st.session_state.s4, st.session_state.loc4, st.session_state.scale4)
+                        dist_function = stats.lognorm
                     
                     # Generate more samples to account for filtering
                     # This ensures we have enough data points after filtering for narrow ranges
