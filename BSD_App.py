@@ -411,17 +411,20 @@ else:
     st.header("⚙️ 3. Return Period Analysis & Export")
     st.subheader("Return Period Analysis (Annual Exceedance Probability)")
     st.markdown("Calibrate the fitted distribution using a known anchor event. This allows translating the geometric distribution into time-based return periods (annualities).")
-    st.markdown("Enter the size and return period of a known event (i.e., the largest observed block in a given timeframe) to calculate the corresponding block sizes for other return periods (30, 100, and 300 years).")
+    st.markdown("Enter the size and return period of a known event (i.e., the largest observed block in a given timeframe) to calculate the annual rockfall frequency (λ₀) and the corresponding block sizes for other return periods (30, 100, and 300 years).")
 
     col_anchor1, col_anchor2 = st.columns(2)
-    anchor_block_axis = col_anchor1.number_input("Block axis of the anchor event [m]", min_value=0.1, value=1.25, step=0.1, format="%.2f")
+    # NEU: Eingabe als Volumen (m³)
+    anchor_block_volume = col_anchor1.number_input("Block volume of the anchor event [m³]", min_value=0.001, value=2.00, step=0.1, format="%.3f")
     anchor_return_period = col_anchor2.number_input("Return period of the anchor event [years]", min_value=1, value=50, step=10)
+    
+    # Im Hintergrund für die Formeln wieder in die Kantenlänge (m) umrechnen
+    anchor_block_axis = anchor_block_volume ** (1/3)
 
     if st.button("Calculate Annualities"):
         results_data = []
         target_periods = [30, 100, 300]
         
-        # Definition der Verteilungen und ihrer Parameter im session_state
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
             'weibull_min': (stats.weibull_min, ['c2', 'loc2', 'scale2']),
@@ -438,22 +441,23 @@ else:
                     exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
                     
                     if exceedance_prob_anchor <= 1e-9:
-                        row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
+                        # NEU: Spalten heißen jetzt [m³]
+                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
                     else:
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
                         
-                        # ---> NEU: lambda_0 als Spalte in die Tabelle aufnehmen!
-                        row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
+                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": f"{lambda_0:.3f}"}
                         
                         for T_target in target_periods:
                             target_exceedance_prob = (1 / T_target) / lambda_0
                             target_cdf = 1 - np.clip(target_exceedance_prob, 0, 1)
                             calc_val = dist_func.ppf(target_cdf, *params)
-                            row[f"{T_target}-year [m]"] = f"{calc_val:.3f}"
+                            # NEU: Ergebnis wird für die Tabelle wieder in m³ (hoch 3) umgerechnet
+                            row[f"{T_target}-year [m³]"] = f"{(calc_val**3):.3f}"
                             
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
                     results_data.append(row)
         
         if results_data:
@@ -461,7 +465,8 @@ else:
 
     # Tabelle anzeigen, falls berechnet
     if 'annual_results_df' in st.session_state:
-        st.markdown("##### Annual Total Rockfall Frequencies (λ₀) & Calibrated Return Periods:")
+        # NEU: Die angepasste Überschrift
+        st.markdown("##### Annual Total Rockfall Frequency (λ₀) & Calibrated Return Periods:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
 
         
@@ -503,39 +508,25 @@ else:
         st.info(f"Generating blocks from the fitted **{selected_download_distribution}** distribution.")
 
         # 2. Min/Max Block Axis Input (for block axis [m])
-        st.markdown("Set the minimum and maximum **block axis** values for the generated distribution (values outside this range will be excluded).")
+        st.markdown("Set the minimum and maximum **block volume** values for the generated distribution (values outside this range will be excluded).")
+        
         st.info("""
-        * **Lower Cut-off:** Define a reasonable minimum block size based on the limitations of your target simulation tool.
-          * *The min. default value of 30 cm block axis corresponds to a volume of 0.027 m³.*
-        * **Upper Cut-off:** Use the return period analysis above to neglect extreme, highly improbable events, depending on your specific protection goals.
-          * *The max. default value of 1.25 m block axis corresponds to a volume of 1.95 m³.*
-        
-        **⚠️ Expert opinion is required to define meaningful boundaries**
+* **Lower Cut-off:** Define a reasonable minimum block size based on the limitations of your target simulation tool.
+* **Upper Cut-off:** Use the return period calibration above to neglect extreme, highly improbable events, depending on your specific protection goals.
         """)
-        col_min_max_1, col_min_max_2 = st.columns(2)
-        with col_min_max_1:
-            min_block_axis = st.number_input(
-                "Minimum Block Axis [m]:", 
-                min_value=0.10, 
-                value=0.30, # Default value
-                step=0.05, 
-                format="%.2f", 
-                key="min_block_axis_input_download"
-            )
-        with col_min_max_2:
-            max_block_axis = st.number_input(
-                "Maximum Block Axis [m]", 
-                min_value=min_block_axis + 0.05, # Ensures max > min
-                value=1.25, # Default value
-                step=0.05, 
-                format="%.2f", 
-                key="max_block_axis_input_download"                
-            )
         
-        if min_block_axis >= max_block_axis:
-            st.error("Minimum block axis must be less than maximum block axis.")
-            generation_possible_overall = False # Disable generation if range is invalid
+        col1, col2 = st.columns(2)
+        # NEU: Eingaben sind jetzt in Volumen (m³)
+        min_block_volume = col1.number_input("Minimum Block Volume [m³]:", min_value=0.001, value=0.027, step=0.05, format="%.3f")
+        max_block_volume = col2.number_input("Maximum Block Volume [m³]:", min_value=min_block_volume + 0.001, value=3.375, step=0.05, format="%.3f")
 
+        # Im Hintergrund für die Filter-Logik wieder in die Kantenlänge (m) umrechnen
+        min_block_axis = min_block_volume ** (1/3)
+        max_block_axis = max_block_volume ** (1/3)
+
+        if min_block_volume >= max_block_volume:
+            st.error("Minimum block volume must be less than maximum block volume.")
+            generation_possible_overall = False # Generation deaktivieren, wenn die Spanne ungültig ist
 
         # Number of samples to generate
         num_samples = st.slider(
