@@ -241,7 +241,7 @@ with st.expander("ℹ️ About This Project"):
     ### 💡 The Solution
     This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended).
     * **Curve Fitting & Blocklists:** The app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), and generates robust blocklists (intensity-frequency-relations) for rockfall simulations.
-    * **Return Period Analysis (Annuality):** It bridges the gap between spatial geometry and time. A fitted distribution natively only provides the *relative* probability of block sizes. By defining a known worst-case anchor event (a specific block size and its estimated return period), the geometrical distribution is translated into temporal return periods. This allows for the calculation of yearly rockfall events (of any size) and of block sizes for specific annualities (e.g., 30, 100, and 300-year events).
+    * **Return Period Analysis (Annuality):** It bridges the gap between spatial geometry and time. A fitted distribution natively only provides the *relative* probability of block sizes. By defining a known worst-case anchor event (a specific block size and its estimated return period), the geometrical distribution is translated into temporal return periods. This allows for the calculation of yearly rockfall events (of any size) and of block sizes for specific annualities (e.g., 30, 100, 150 and 300-year events).
     ### ⚠️ Practical Application & Expert Judgment
     Fitted statistical distributions range mathematically from dust particles to infinite rock masses, which is not useful for numerical modeling. **Expert opinion is required** to define meaningful boundaries:
     * **Upper Cut-off (Worst-Case):** Based on the annuality analysis, unrealistic extreme events with return periods far beyond the structure's lifespan can be neglected.
@@ -360,7 +360,7 @@ else:
 
     # Display file information
     if st.session_state.get('uploaded_filename') and st.session_state.get('block_count') is not None:
-        st.header("📂 1. Input Data & Diagnostics")
+        st.header("📂 1. Input Data")
         st.subheader("File Information")
         st.write(f"**Filename:** {st.session_state.uploaded_filename}")
         st.write(f"**Number of blocks:** {st.session_state.block_count}")
@@ -409,7 +409,7 @@ else:
     st.header("⚙️ 3. Return Period Analysis & Export")
     st.subheader("Return Period Analysis (Annual Exceedance Probability)")
     st.markdown("Calibrate the fitted distribution using a known anchor event. This allows translating the geometric distribution into time-based return periods (annualities).")
-    st.markdown("Enter the size and return period of a known event (i.e., the largest observed block in a given timeframe) to calculate the annual rockfall frequency (λ₀) and the corresponding block sizes for other return periods (30, 100, and 300 years).")
+    st.markdown("Enter the size and return period of a known event (i.e., the largest observed block in a given timeframe) to calculate the annual rockfall frequency (λ₀) and the corresponding block sizes for other return periods (30, 100, 150 and 300 years).")
 
     col_anchor1, col_anchor2 = st.columns(2)
     # NEU: Eingabe als Volumen (m³)
@@ -430,7 +430,7 @@ else:
 
     if st.button("Calculate Annualities"):
         results_data = []
-        target_periods = [30, 100, 300]
+        target_periods = [30, 100, 150, 300]
         
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
@@ -449,7 +449,7 @@ else:
                     
                     if exceedance_prob_anchor <= 1e-9:
                         # NEU: Spalten heißen jetzt [m³]
-                        row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
+                        row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
                     else:
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
                         
@@ -464,7 +464,7 @@ else:
                             
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
                     results_data.append(row)
         
         if results_data:
