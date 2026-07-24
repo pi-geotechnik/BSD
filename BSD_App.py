@@ -243,7 +243,7 @@ with st.expander("ℹ️ About This Project"):
     ### 💡 The Solution
     This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended!).
     * **Curve Fitting & Block Lists:** The app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), and generates robust block lists (intensity-frequency-relations) for rockfall simulations.
-    * **Return Period Analysis (Annuality):** It bridges the gap between spatial geometry and time. By defining a known worst-case anchor event, the geometrical distribution is translated into temporal return periods. This allows for the exact calculation of design blocks for specific annualities (e.g., 30, 100, and 300-year events).
+    * **Return Period Analysis (Annuality):** It bridges the gap between spatial geometry and time. A fitted distribution natively only provides the *relative* probability of block sizes. By defining a known worst-case anchor event (a specific block size and its estimated return period), the geometrical distribution is translated into temporal return periods. This allows for the calculation of block sizes for specific annualities (e.g., 30, 100, and 300-year events) and of yearly events (of any size).
     ### ⚠️ Practical Application & Expert Judgment
     Fitted statistical distributions range mathematically from dust particles to infinite rock masses, which is not useful for numerical modeling. **Expert opinion is required** to define meaningful boundaries:
     * **Upper Cut-off (Worst-Case):** Based on the annuality analysis, unrealistic extreme events with return periods far beyond the structure's lifespan can be neglected.
@@ -251,6 +251,8 @@ with st.expander("ℹ️ About This Project"):
     
     *This application is an open-source project.*
     """)
+    
+    
 
 # --- Sidebar for user input ---
 with st.sidebar:
@@ -436,10 +438,12 @@ else:
                     exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
                     
                     if exceedance_prob_anchor <= 1e-9:
-                        row = {"Distribution": dist_name, "30-year [m]": "Error (prob≈0)", "100-year [m]": "Error (prob≈0)", "300-year [m]": "Error (prob≈0)"}
+                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
                     else:
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
-                        row = {"Distribution": dist_name}
+                        
+                        # ---> NEU: lambda_0 als Spalte in die Tabelle aufnehmen!
+                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": f"{lambda_0:.3f}"}
                         
                         for T_target in target_periods:
                             target_exceedance_prob = (1 / T_target) / lambda_0
@@ -449,7 +453,7 @@ else:
                             
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
                     results_data.append(row)
         
         if results_data:
@@ -457,7 +461,7 @@ else:
 
     # Tabelle anzeigen, falls berechnet
     if 'annual_results_df' in st.session_state:
-        st.markdown("##### Calculated Block Sizes for Target Return Periods:")
+        st.markdown("##### Calculated Block Sizes & Annual Total Rockfalls:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
 
         
