@@ -207,7 +207,8 @@ def clear_all_data():
         'block_count', 'file_source', 'success_message', 'last_error_message',
         'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 
         'loc3', 'scale3', 's4', 'loc4', 'scale4',
-        'annual_results' # Auch die Jährlichkeits-Ergebnisse löschen
+        'annual_results',          # Falls irgendwo noch Reste der alten Logik sind
+        'annual_results_df'        # <--- GANZ WICHTIG: Die neue Vergleichstabelle!
     ]
     for key in keys_to_clear:
         if key in st.session_state:
