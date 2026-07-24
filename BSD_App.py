@@ -415,7 +415,7 @@ else:
 
     col_anchor1, col_anchor2 = st.columns(2)
     anchor_block_axis = col_anchor1.number_input("Block axis of the anchor event [m]", min_value=0.1, value=1.25, step=0.1, format="%.2f")
-    anchor_return_period = col_anchor2.number_input("Return period of the anchor event [years]", min_value=1, value=30, step=10)
+    anchor_return_period = col_anchor2.number_input("Return period of the anchor event [years]", min_value=1, value=50, step=10)
 
     if st.button("Calculate Annualities"):
         results_data = []
