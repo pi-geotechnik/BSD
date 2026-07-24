@@ -438,12 +438,12 @@ else:
                     exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
                     
                     if exceedance_prob_anchor <= 1e-9:
-                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
+                        row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
                     else:
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
                         
                         # ---> NEU: lambda_0 als Spalte in die Tabelle aufnehmen!
-                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": f"{lambda_0:.3f}"}
+                        row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
                         
                         for T_target in target_periods:
                             target_exceedance_prob = (1 / T_target) / lambda_0
@@ -453,7 +453,7 @@ else:
                             
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m]": "Error", "100-year [m]": "Error", "300-year [m]": "Error"}
                     results_data.append(row)
         
         if results_data:
@@ -461,7 +461,7 @@ else:
 
     # Tabelle anzeigen, falls berechnet
     if 'annual_results_df' in st.session_state:
-        st.markdown("##### Calculated Block Sizes & Annual Total Rockfalls:")
+        st.markdown("##### Annual Total Rockfall Frequencies (λ₀) & Calibrated Return Periods:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
 
         
