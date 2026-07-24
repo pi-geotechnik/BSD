@@ -71,24 +71,8 @@ def calculate_mass_in_tonnes(volume_m3, density_kg_m3):
     return (volume_m3 * density_kg_m3) / 1000
 
 def calculate_cubic_root(v):
-    """Calculates the cubic root of a volume (m³) to get block axis (m)."""
+    """Calculates the cubic root of a volume [m³] to get block axis [m]."""
     return (v ** (1/3))
-
-def visualize_histograms_m3_and_m(m_values, m3_values):
-    """Visualizes histograms for block volumes (m³) and block axes (m)."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-    ax1.hist(m3_values, bins=20, color='lightgreen', edgecolor='black')
-    ax1.set_title("Histogram of the block volumes (m³)")
-    ax1.set_xlabel("Block volume [m³]")
-    ax1.set_ylabel("Frequency")
-    
-    ax2.hist(m_values, bins=20, color='skyblue', edgecolor='black')
-    ax2.set_title("Histogram of the block axes [m]")
-    ax2.set_xlabel("Block axis [m]")
-    ax2.set_ylabel("Frequency")
-    
-    plt.tight_layout()
-    return fig
 
 def calculate_and_visualize_percentiles(m_axes):
     """
@@ -110,6 +94,7 @@ def calculate_and_visualize_percentiles(m_axes):
     ax2.set_xlim(left=None, right=None)
     ax2.set_xlabel('Block axis a [m]', fontsize=14)
     ax2.set_ylabel('Cumulative probability F(a)', fontsize=14)
+    ax3.set_xscale('log')
     from matplotlib.ticker import FormatStrFormatter
     ax3.xaxis.set_major_formatter(FormatStrFormatter('%g')) 
     ax3.set_xlabel('Block axis a [m] (log)', fontsize=14)
@@ -213,6 +198,18 @@ def clear_all_data():
     for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
+            
+def clear_annual_results_table():
+    """Clears the annual results table when anchor inputs change."""
+    if 'annual_results_df' in st.session_state:
+        del st.session_state['annual_results_df']
+        
+def clear_generated_blocks():
+    """Clears the generated blocks and download button when input parameters change."""
+    if 'generated_blocks_for_download' in st.session_state:
+        st.session_state.generated_blocks_for_download = []
+    if 'output_unit_for_download' in st.session_state:
+        st.session_state.output_unit_for_download = None
 
 # --- Streamlit App Layout ---
 try:
@@ -242,8 +239,8 @@ with st.expander("ℹ️ About This Project"):
     ### 🧗‍♀️ The Challenge
     As demonstrated in the research above, designing rockfall protection measures based on a single *design block* often results in unreliable trajectories (i.e., kinetic energies, bounce heights, and runout distances). Furthermore, Block Size Distributions (BSDs) derived purely from debris fields are highly subjective. Linking the percentiles of such field-derived BSDs (e.g., the 95th-98th percentile according to ONR 24810) directly to the frequency of rockfall events is scientifically problematic and physically flawed.
     ### 💡 The Solution
-    This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended!).
-    * **Curve Fitting & Block Lists:** The app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), and generates robust block lists (intensity-frequency-relations) for rockfall simulations.
+    This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended).
+    * **Curve Fitting & Blocklists:** The app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), and generates robust blocklists (intensity-frequency-relations) for rockfall simulations.
     * **Return Period Analysis (Annuality):** It bridges the gap between spatial geometry and time. A fitted distribution natively only provides the *relative* probability of block sizes. By defining a known worst-case anchor event (a specific block size and its estimated return period), the geometrical distribution is translated into temporal return periods. This allows for the calculation of block sizes for specific annualities (e.g., 30, 100, and 300-year events) and of yearly events (of any size).
     ### ⚠️ Practical Application & Expert Judgment
     Fitted statistical distributions range mathematically from dust particles to infinite rock masses, which is not useful for numerical modeling. **Expert opinion is required** to define meaningful boundaries:
@@ -416,8 +413,17 @@ else:
 
     col_anchor1, col_anchor2 = st.columns(2)
     # NEU: Eingabe als Volumen (m³)
-    anchor_block_volume = col_anchor1.number_input("Block volume of the anchor event [m³]", min_value=0.001, value=2.00, step=0.1, format="%.3f")
-    anchor_return_period = col_anchor2.number_input("Return period of the anchor event [years]", min_value=1, value=50, step=10)
+    anchor_block_volume = col_anchor1.number_input(
+        "Block volume of the anchor event [m³]", 
+        min_value=0.001, value=2.0, step=0.1, format="%.3f",
+        on_change=clear_annual_results_table
+    )
+    
+    anchor_return_period = col_anchor2.number_input(
+        "Return period of the anchor event [years]", 
+        min_value=1, value=50, step=10,
+        on_change=clear_annual_results_table
+    )
     
     # Im Hintergrund für die Formeln wieder in die Kantenlänge (m) umrechnen
     anchor_block_axis = anchor_block_volume ** (1/3)
@@ -474,10 +480,11 @@ else:
         
 # --- ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
     st.subheader("Generate and Download Filtered Distribution")
-    st.markdown("Select a fitted distribution and define the block axis range to generate a custom block list. You can then choose the output unit for download.")
+    st.markdown("Select a fitted distribution and define the block axis range to generate a custom blocklist. You can then choose the output unit for download.")
 
     # Determine which distributions have fitted parameters and can be selected
     available_dists_for_download = []
+    
     # Check if parameters for genexpon are available
     if 'a1' in st.session_state and 'b1' in st.session_state and 'c1' in st.session_state and 'loc1' in st.session_state and 'scale1' in st.session_state:
         available_dists_for_download.append('genexpon')
@@ -499,7 +506,8 @@ else:
         selected_download_distribution = st.selectbox(
             "Select Distribution for Generation:",
             options=available_dists_for_download,
-            key="selected_download_dist"
+            key="selected_download_dist",
+            on_change=clear_generated_blocks
         )
         generation_possible_overall = True
 
@@ -518,8 +526,22 @@ else:
         
         col1, col2 = st.columns(2)
         # NEU: Eingaben sind jetzt in Volumen (m³)
-        min_block_volume = col1.number_input("Minimum Block Volume [m³]:", min_value=0.001, value=0.027, step=0.05, format="%.3f")
-        max_block_volume = col2.number_input("Maximum Block Volume [m³]:", min_value=min_block_volume + 0.001, value=3.375, step=0.05, format="%.3f")
+        min_block_volume = col1.number_input(
+            "Minimum Block Volume [m³]:", 
+            min_value=0.000001, 
+            value=0.025, 
+            step=0.005, 
+            format="%.6f", 
+            on_change=clear_generated_blocks
+        )
+        max_block_volume = col2.number_input(
+            "Maximum Block Volume [m³]:", 
+            min_value=min_block_volume + 0.000001, 
+            value=3.35, 
+            step=0.05, 
+            format="%.6f", 
+            on_change=clear_generated_blocks
+        )
 
         # Im Hintergrund für die Filter-Logik wieder in die Kantenlänge (m) umrechnen
         min_block_axis = min_block_volume ** (1/3)
@@ -537,25 +559,28 @@ else:
             value=1000, 
             step=500, 
             key="num_samples_slider_download",
-            help="Generate a larger number of samples to ensure sufficient blocks after filtering."
+            help="Generate a larger number of samples to ensure sufficient blocks after filtering.",
+            on_change=clear_generated_blocks
         )
 
         # 3. Output Type Selection
-        st.markdown("Choose the output unit for the generated block list (block mass [t] is required for THROW):")
+        st.markdown("Choose the output unit for the generated blocklist (block mass [t] is required for THROW):")
         selected_output_unit = st.radio(
             "Output Unit:",
             ('Block Volume [m³]', 'Block Mass [t]'),
-            key="output_unit_selector"
+            key="output_unit_selector",
+            on_change=clear_generated_blocks
         )
 
         download_density_kg_m3 = None
-        if selected_output_unit == 'Block Mass (t)':
+        if selected_output_unit == 'Block Mass [t]':
             download_density_kg_m3 = st.number_input(
-                "Density for mass calculation (kg/m³):", 
+                "Density for mass calculation [kg/m³]:", 
                 min_value=250, 
                 value=2650, 
                 step=50, 
-                key="download_density_input"
+                key="download_density_input",
+                on_change=clear_generated_blocks
             )
             if download_density_kg_m3 <= 0:
                 st.error("Density must be greater than 0 for mass calculation.")
@@ -563,7 +588,7 @@ else:
 
         # Generation Button
         if generation_possible_overall:
-            if st.button("Generate Filtered Block List", key="generate_filtered_button"):
+            if st.button("Generate Filtered Blocklist", key="generate_filtered_button"):
                 with st.spinner("Generating and filtering distribution..."):
                     generated_raw_axes = []
                     params_for_rvs = ()
@@ -599,10 +624,10 @@ else:
                         #if selected_output_unit == 'Block Axis (m)':
                         #    final_output_blocks_converted = final_generated_blocks_m_axis
                         #    st.session_state.output_unit_for_download = 'm'
-                        if selected_output_unit == 'Block Volume (m³)':
+                        if selected_output_unit == 'Block Volume [m³]':
                             final_output_blocks_converted = [x**3 for x in final_generated_blocks_m_axis]
                             st.session_state.output_unit_for_download = 'm3'
-                        elif selected_output_unit == 'Block Mass (t)':
+                        elif selected_output_unit == 'Block Mass [t]':
                             if download_density_kg_m3 and download_density_kg_m3 > 0:
                                 final_output_blocks_converted = [(x**3 * download_density_kg_m3) / 1000 for x in final_generated_blocks_m_axis]
                                 st.session_state.output_unit_for_download = 't'
@@ -618,10 +643,10 @@ else:
                             
                             # Optional: Display a small histogram of the generated blocks (in their final unit)
                             fig_gen, ax_gen = plt.subplots(figsize=(8, 4))
-                            ax_gen.hist(final_output_blocks_converted, bins='auto', color='lightcoral', edgecolor='black')
+                            ax_gen.hist(final_output_blocks_converted, bins='auto', density=True, histtype='stepfilled', color='tab:blue', alpha=0.3)
                             ax_gen.set_title(f"Histogram of Generated Blocks ({len(final_output_blocks_converted)} blocks)")
                             ax_gen.set_xlabel(selected_output_unit)
-                            ax_gen.set_ylabel("Frequency")
+                            ax_gen.set_ylabel("Probability density")
                             st.pyplot(fig_gen)
                             plt.close(fig_gen)
                         else:
@@ -641,7 +666,7 @@ else:
         
         # Format the blocks as a string, each on a new line
         # Use different precision for volume (m³) vs mass (t)
-        if st.session_state.output_unit_for_download == 'm³':  # 'm3'
+        if st.session_state.output_unit_for_download == 'm3':
              output_string = "\n".join(f"{x:.6f}" for x in st.session_state.generated_blocks_for_download) # 6 decimal places for m³
              file_name = f"{selected_download_distribution}_filtered_{st.session_state.output_unit_for_download}.txt"
         else: # 't'
@@ -649,9 +674,10 @@ else:
              file_name = f"{selected_download_distribution}_filtered_{st.session_state.output_unit_for_download}.txt"
 
         st.download_button(
-            label=f"Download Generated Block List ({st.session_state.output_unit_for_download.upper()})",
+            label=f"Download Generated Blocklist ({st.session_state.output_unit_for_download.upper()})",
             data=output_string,
             file_name=file_name,
             mime="text/plain",
+            on_click="ignore",
             help=f"Download the list of generated block values in {st.session_state.output_unit_for_download.upper()}."
         )
