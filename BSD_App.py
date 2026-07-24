@@ -449,11 +449,11 @@ else:
                     
                     if exceedance_prob_anchor <= 1e-9:
                         # NEU: Spalten heißen jetzt [m³]
-                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
+                        row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
                     else:
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
                         
-                        row = {"Distribution": dist_name, "λ₀ [blocks/year]": f"{lambda_0:.3f}"}
+                        row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
                         
                         for T_target in target_periods:
                             target_exceedance_prob = (1 / T_target) / lambda_0
@@ -464,7 +464,7 @@ else:
                             
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "λ₀ [blocks/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
                     results_data.append(row)
         
         if results_data:
