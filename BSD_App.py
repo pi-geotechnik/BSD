@@ -192,8 +192,8 @@ def clear_all_data():
         'block_count', 'file_source', 'success_message', 'last_error_message',
         'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 
         'loc3', 'scale3', 's4', 'loc4', 'scale4',
-        'annual_results',          # Falls irgendwo noch Reste der alten Logik sind
-        'annual_results_df'        # <--- GANZ WICHTIG: Die neue Vergleichstabelle!
+        'annual_results',
+        'annual_results_df'
     ]
     for key in keys_to_clear:
         if key in st.session_state:
@@ -203,7 +203,11 @@ def clear_annual_results_table():
     """Clears the annual results table when anchor inputs change."""
     if 'annual_results_df' in st.session_state:
         del st.session_state['annual_results_df']
-        
+
+def handle_cal_method_change():
+    clear_annual_results_table()
+    st.session_state.saved_cal_method = st.session_state.calibration_method_selector
+    
 def clear_generated_blocks():
     """Clears the generated blocks and download button when input parameters change."""
     if 'generated_blocks_for_download' in st.session_state:
@@ -401,36 +405,56 @@ else:
             "weibull_min [m³]": L2s**3, "expon [m³]": L3s**3,
             "lognorm [m³]": L4s**3
         })
-        st.dataframe(df1.style.hide(axis="index")) # Ihre Original-Darstellung
+        st.dataframe(df1.style.hide(axis="index"))
     else:
         st.info("Fitting parameters not yet available. Results will be shown after data processing.")
 
-    st.divider() # <--- Trennlinie vor dem neuen Kapitel
+    st.divider()
     st.header("⚙️ 3. Return Period Analysis & Export")
     st.subheader("Return Period Analysis (Annual Exceedance Probability)")
-    st.markdown("Calibrate the fitted distribution using a known anchor event. This allows translating the geometric distribution into time-based return periods (annualities).")
-    st.markdown("Enter the size and return period of a known event (i.e., the largest observed block in a given timeframe) to calculate the annual rockfall frequency (λ₀) and the corresponding block sizes for other return periods (30, 100, 150 and 300 years).")
+    st.markdown("Calibrate the fitted distribution using an estimated anchor event or an estimated event frequency. This allows translating the geometric distribution into time-based return periods (annualities).")
+    
+    # 1. Sicheres Backup initialisieren
+    if 'saved_cal_method' not in st.session_state:
+        st.session_state.saved_cal_method = "Option 1"
+        
+    # 2. Den korrekten Index anhand des Backups ermitteln
+    default_index = 0 if st.session_state.saved_cal_method.startswith("Option 1") else 1
 
-    col_anchor1, col_anchor2 = st.columns(2)
-    # NEU: Eingabe als Volumen (m³)
-    anchor_block_volume = col_anchor1.number_input(
-        "Block volume of the anchor event [m³]", 
-        min_value=0.001, value=2.0, step=0.1, format="%.3f",
-        on_change=clear_annual_results_table
+    # 3. Der Radio-Button nutzt nun diesen gesicherten Index und den neuen Callback
+    calibration_method = st.radio(
+        "Choose Calibration Method:",
+        ("Option 1: Anchor Event (estimated block volume & return period)", "Option 2: Event frequency (estimated total rockfalls per year λ₀)"),
+        index=default_index,
+        on_change=handle_cal_method_change,
+        key="calibration_method_selector"
     )
-    
-    anchor_return_period = col_anchor2.number_input(
-        "Return period of the anchor event [years]", 
-        min_value=1, value=50, step=10,
-        on_change=clear_annual_results_table
-    )
-    
-    # Im Hintergrund für die Formeln wieder in die Kantenlänge (m) umrechnen
-    anchor_block_axis = anchor_block_volume ** (1/3)
+
+    if calibration_method.startswith("Option 1"):
+        st.info("Enter the size and return period of an estimated event (e.g., the largest observed block in a given timeframe). The app will calculate the total event frequency (λ₀) and the block sizes for several return periods.")
+        col_anchor1, col_anchor2 = st.columns(2)
+        anchor_block_volume = col_anchor1.number_input(
+            "Block volume of the anchor event [m³]", 
+            min_value=0.001, value=0.5, step=0.1, format="%.3f",
+            on_change=clear_annual_results_table
+        )
+        anchor_return_period = col_anchor2.number_input(
+            "Return period of the anchor event [years]", 
+            min_value=1, value=30, step=10,
+            on_change=clear_annual_results_table
+        )
+        anchor_block_axis = anchor_block_volume ** (1/3)
+    else:
+        st.info("Estimate the event frequency of the rock face. Enter how many blocks of ANY size fall per year on average. The app will calculate the block sizes for several return periods.")
+        user_lambda_0 = st.number_input(
+            "Estimated Total Rockfalls per Year (λ₀) [events/year]:", 
+            min_value=0.001, value=1.0, step=0.1, format="%.3f",
+            on_change=clear_annual_results_table
+        )
 
     if st.button("Calculate Annualities"):
         results_data = []
-        target_periods = [30, 100, 150, 300]
+        target_periods = [1, 5, 10, 25, 30, 50, 75, 100, 125, 150, 300]
         
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
@@ -444,27 +468,32 @@ else:
                 params = tuple(st.session_state[k] for k in param_keys)
                 
                 try:
-                    lambda_anchor = 1 / anchor_return_period
-                    exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
-                    
-                    if exceedance_prob_anchor <= 1e-9:
-                        # NEU: Spalten heißen jetzt [m³]
-                        row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
-                    else:
-                        lambda_0 = lambda_anchor / exceedance_prob_anchor
+                    # NEU: Unterscheidung, woher lambda_0 kommt
+                    if calibration_method.startswith("Option 1"):
+                        lambda_anchor = 1 / anchor_return_period
+                        exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
                         
-                        row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
-                        
-                        for T_target in target_periods:
-                            target_exceedance_prob = (1 / T_target) / lambda_0
-                            target_cdf = 1 - np.clip(target_exceedance_prob, 0, 1)
-                            calc_val = dist_func.ppf(target_cdf, *params)
-                            # NEU: Ergebnis wird für die Tabelle wieder in m³ (hoch 3) umgerechnet
-                            row[f"{T_target}-year [m³]"] = f"{(calc_val**3):.3f}"
+                        if exceedance_prob_anchor <= 1e-9:
+                            row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "1-year [m³]": "Error", "5-year [m³]": "Error", "10-year [m³]": "Error", "25-year [m³]": "Error", "30-year [m³]": "Error", "50-year [m³]": "Error", "75-year [m³]": "Error", "100-year [m³]": "Error", "125-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
+                            results_data.append(row)
+                            continue # Zum nächsten Durchlauf springen
                             
+                        lambda_0 = lambda_anchor / exceedance_prob_anchor
+                    else:
+                        # Wenn Methode 2 gewählt wurde, übernehmen wir lambda_0 direkt vom Nutzer!
+                        lambda_0 = user_lambda_0
+                        
+                    row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
+                    
+                    for T_target in target_periods:
+                        target_exceedance_prob = (1 / T_target) / lambda_0
+                        target_cdf = 1 - np.clip(target_exceedance_prob, 0, 1)
+                        calc_val = dist_func.ppf(target_cdf, *params)
+                        row[f"{T_target}-year [m³]"] = f"{(calc_val**3):.4f}"
+                        
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
                     results_data.append(row)
         
         if results_data:
@@ -472,10 +501,8 @@ else:
 
     # Tabelle anzeigen, falls berechnet
     if 'annual_results_df' in st.session_state:
-        # NEU: Die angepasste Überschrift
-        st.markdown("##### Annual Total Rockfall Frequency (λ₀) & Calibrated Return Periods:")
+        st.markdown("##### Annual Total Rockfall Frequencies (λ₀) & Calibrated Return Periods:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
-
         
         
 # --- ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
