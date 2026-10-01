@@ -238,9 +238,9 @@ st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
     Version 2.3, July 2026
-    * This method was developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at TU Wien (2023). 
+    * This method was originally developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at TU Wien (2023). 
     * Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4).
-    ### 🧗‍♀️ The Challenge
+    ### 🧗‍♀️ Problem statement
     As demonstrated in the research above, designing rockfall protection measures based on a single *design block* often results in unreliable trajectories (i.e., kinetic energies, bounce heights, and runout distances). Furthermore, Block Size Distributions (BSDs) derived purely from debris fields are highly subjective. Linking the percentiles of such field-derived BSDs (e.g., the 95th-98th percentile according to ONR 24810) directly to the frequency of rockfall events is scientifically problematic and physically flawed.
     ### 💡 The Solution
     This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended).
