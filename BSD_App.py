@@ -507,7 +507,7 @@ else:
         
 # --- ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
     st.subheader("Generate and Download Filtered Distribution")
-    st.markdown("Select a fitted distribution and define the block axis range to generate a custom blocklist. You can then choose the output unit for download.")
+    st.markdown("Select a custom distribution and specify the block axis range to create a custom block list. You can then select the output unit for the download.")
 
     # Determine which distributions have fitted parameters and can be selected
     available_dists_for_download = []
@@ -591,7 +591,7 @@ else:
         )
 
         # 3. Output Type Selection
-        st.markdown("Choose the output unit for the generated blocklist (block mass [t] is required for THROW):")
+        st.markdown("Select the output unit for the generated block list (for THROW, the block mass [t] is required):")
         selected_output_unit = st.radio(
             "Output Unit:",
             ('Block Volume [m³]', 'Block Mass [t]'),
