@@ -310,7 +310,7 @@ with st.sidebar:
         type=["txt"],
         key=f"uploader_{st.session_state.uploader_key}"
     )
-    st.info("Note: please make sure that all numbers in the uploaded text file use the dot ('.') instead of the comma (',') as decimal separator.")
+    st.info("Note: Please ensure that, in the uploaded text file, a full stop ('.') is used as the decimal separator for all numbers, rather than a comma (',').")
 
     if uploaded_user_file:
         # Prüfen, ob es eine NEUE Datei ist
@@ -356,7 +356,7 @@ if st.session_state.get('last_error_message'):
     st.session_state.last_error_message = None
 
 if not st.session_state.get('m_achsen'):
-    st.info("Please select a unit in the left sidebar and load a sample file or upload your own file to get started.")
+    st.info("Please select a unit from the left-hand sidebar and upload a sample file or your own file to get started.")
 else:
     # Alle nachfolgenden Berechnungen und Anzeigen
     # ... (Der Rest Ihres Codes für die Hauptseite bleibt unverändert) ...
