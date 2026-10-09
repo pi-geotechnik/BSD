@@ -4,12 +4,14 @@
 # App for visualising a block size distribution and fitting a probability function
 # --------------------------------------------------------------
 #
-# Code and App Version 1, Mar 2025
-# (c) Mariella Illeditsch, 2025
+# Code and App Version 2.2
+# (c) Mariella Illeditsch, 2026
 # mariella.illeditsch@pi-geo.at
-# Version 2.1 Mar 2026: Zeile 67: Runden der Volumina entfernt
-# Version 2.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
-# Version 2.3 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
+# Version 1.0 Mar 2025
+# Version 1.1 Mar 2026: Zeile 67: Runden der Volumina entfernt
+# Version 1.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
+# Version 2.1 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
+# Versoin 2.2 Oct 2026: adding return periods 500 and 1000
 #
 # --------------------------------------------------------------
 
@@ -454,7 +456,7 @@ else:
 
     if st.button("Calculate Annualities"):
         results_data = []
-        target_periods = [1, 5, 10, 25, 30, 50, 75, 100, 125, 150, 300]
+        target_periods = [1, 5, 10, 25, 30, 50, 75, 100, 125, 150, 300, 500, 1000]
         
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
@@ -474,7 +476,7 @@ else:
                         exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
                         
                         if exceedance_prob_anchor <= 1e-9:
-                            row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "1-year [m³]": "Error", "5-year [m³]": "Error", "10-year [m³]": "Error", "25-year [m³]": "Error", "30-year [m³]": "Error", "50-year [m³]": "Error", "75-year [m³]": "Error", "100-year [m³]": "Error", "125-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
+                            row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "1-year [m³]": "Error", "5-year [m³]": "Error", "10-year [m³]": "Error", "25-year [m³]": "Error", "30-year [m³]": "Error", "50-year [m³]": "Error", "75-year [m³]": "Error", "100-year [m³]": "Error", "125-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error", "500-year [m³]": "Error", "1000-year [m³]": "Error"}
                             results_data.append(row)
                             continue # Zum nächsten Durchlauf springen
                             
@@ -493,7 +495,7 @@ else:
                         
                     results_data.append(row)
                 except Exception as e:
-                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
+                    row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error", "500-year [m³]": "Error", "1000-year [m³]": "Error"}
                     results_data.append(row)
         
         if results_data:
