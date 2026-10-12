@@ -4,12 +4,14 @@
 # App for visualising a block size distribution and fitting a probability function
 # --------------------------------------------------------------
 #
-# Code and App Version 1, Mar 2025
-# (c) Mariella Illeditsch, 2025
+# Code and App Version 2.2
+# (c) Mariella Illeditsch, 2026
 # mariella.illeditsch@pi-geo.at
-# Version 2.1 Mar 2026: Zeile 67: Runden der Volumina entfernt
-# Version 2.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
-# Version 2.3 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
+# Version 1.0 Mar 2025
+# Version 1.1 Mar 2026: Line 67: Rounding of volumes removed
+# Version 1.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
+# Version 2.1 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
+# Versoin 2.2 Oct 2026: adding return periods 500 and 1000
 #
 # --------------------------------------------------------------
 
@@ -33,14 +35,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Füge diesen Stilblock hinzu, um die Schriftgröße von st.info anzupassen
+# Add this style block to adjust the font size of st.info
 st.markdown("""
     <style>
-    /* Reduziert die Schriftgröße des Textes in st.info Boxen */
+    /* Reduces the font size of the text in st.info boxes */
     div[data-testid="stInfo"] p {
         font-size: smaller;
     }
-    /* Stil für die Jährlichkeitsergebnisse */
+    /* Style for the annual results */
     .annual_result {
         font-size: 1.1em;
         font-weight: bold;
@@ -54,17 +56,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Pfad zum Logo
+# Path to the logo
 LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
 
-# Beispiel-Datei URLs auf GitHub
+# Example file URLs on GitHub
 EXAMPLE_FILES = {
     "Rauwacke": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_mils_rauwacke_m3.txt",
     "Orthogneiss": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_rossatz_orthogneis_m3.txt",
     "Slate": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_vals_schiefer_m3.txt"
 }
 
-# --- Hilfsfunktionen ---
+# --- Help functions ---
 
 def calculate_mass_in_tonnes(volume_m3, density_kg_m3):
     """Calculates mass in tonnes from volume in m³ and density in kg/m³."""
@@ -217,11 +219,11 @@ def clear_generated_blocks():
 
 # --- Streamlit App Layout ---
 try:
-    # Bild einlesen und in Base64 umwandeln
+    # Read an image and convert it to Base64
     with open(LOGO_PATH, "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read()).decode()
 
-    # HTML mit Link und eingebettetem Bild erzeugen
+    # Create HTML with a link and an embedded image
     st.markdown(
         f"""
         <a href="https://pi-geo.at/" target="_blank">
@@ -260,17 +262,17 @@ with st.expander("ℹ️ About This Project"):
 with st.sidebar:
     st.header("Input Data")
     
-    # KORREKTUR 1: Den uploader_key initialisieren
+    # Initialise the uploader_key
     if 'uploader_key' not in st.session_state:
         st.session_state.uploader_key = 0
     
-    # Session state Initialisierung (unverändert)
+    # Session state initialisation (unchanged)
     if 'einheit' not in st.session_state: st.session_state.einheit = "Volume in m³"
 
     selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
 
     if st.session_state.einheit != selected_unit:
-        clear_all_data() # Löscht alle Daten, inkl. annual_results
+        clear_all_data() # Deletes all data, including annual_results
         st.session_state.einheit = selected_unit
         st.rerun()
 
@@ -281,9 +283,9 @@ with st.sidebar:
     st.subheader("Load Example Files")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
-            # KORREKTUR 2: uploader_key erhöhen, um das Upload-Widget zurückzusetzen
+            # Increase the 'uploader_key' to reset the upload widget
             st.session_state.uploader_key += 1
-            clear_all_data() # Alle alten Daten löschen
+            clear_all_data() # Delete all old data
             
             with st.spinner(f"Loading '{name}'..."):
                 try:
@@ -304,7 +306,7 @@ with st.sidebar:
             st.rerun()
 
     st.subheader("Upload Your Own File")
-    # KORREKTUR 3: Den uploader mit dem Schlüssel verknüpfen
+    # Link the uploader to the key
     uploaded_user_file = st.file_uploader(
         f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:",
         type=["txt"],
@@ -313,11 +315,11 @@ with st.sidebar:
     st.info("Note: Please ensure that, in the uploaded text file, a full stop ('.') is used as the decimal separator for all numbers, rather than a comma (',').")
 
     if uploaded_user_file:
-        # Prüfen, ob es eine NEUE Datei ist
+        # Check whether it is a NEW file
         if st.session_state.get('uploaded_filename') != uploaded_user_file.name:
             clear_all_data()
             
-            # WICHTIG: Sofort den Namen merken, um die Endlosschleife zu stoppen!
+            # Make a note of the name straight away to stop the endless loop
             st.session_state.uploaded_filename = uploaded_user_file.name
             st.session_state.file_source = 'user'
             
@@ -334,9 +336,9 @@ with st.sidebar:
                 else:
                     st.session_state.last_error_message = "File could not be processed. Please check format and content."
             
-            st.rerun() # Führt nun nur noch EINMAL aus
+            st.rerun() # Now run it just ONCE
 
-    # Falls der Nutzer das kleine 'X' im Uploader klickt
+    # If the user clicks the small 'X' in the uploader
     elif st.session_state.get('file_source') == 'user':
         clear_all_data()
         st.info("File removed. Please upload a new file or select a sample file.")
@@ -358,8 +360,7 @@ if st.session_state.get('last_error_message'):
 if not st.session_state.get('m_achsen'):
     st.info("Please select a unit from the left-hand sidebar and upload a sample file or your own file to get started.")
 else:
-    # Alle nachfolgenden Berechnungen und Anzeigen
-    # ... (Der Rest Ihres Codes für die Hauptseite bleibt unverändert) ...
+    # All subsequent calculations and displays
     m_achsen = st.session_state['m_achsen']
 
     # Display file information
@@ -374,7 +375,7 @@ else:
             with st.expander(f"Show Contents of {st.session_state.uploaded_filename}"):
                  st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
 
-    st.divider() # <--- Fügt eine feine Trennlinie ein!
+    st.divider()
     st.header("📊 2. Statistical Analysis & Distribution Fitting")
     st.subheader("Visualization of Probability Distribution")
     fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen)
@@ -414,14 +415,14 @@ else:
     st.subheader("Return Period Analysis (Annual Exceedance Probability)")
     st.markdown("Calibrate the fitted distribution using an estimated anchor event or an estimated event frequency. This allows translating the geometric distribution into time-based return periods (annualities).")
     
-    # 1. Sicheres Backup initialisieren
+    # 1. Set up a secure backup
     if 'saved_cal_method' not in st.session_state:
         st.session_state.saved_cal_method = "Option 1"
         
-    # 2. Den korrekten Index anhand des Backups ermitteln
+    # 2. Determining the correct index from the backup
     default_index = 0 if st.session_state.saved_cal_method.startswith("Option 1") else 1
 
-    # 3. Der Radio-Button nutzt nun diesen gesicherten Index und den neuen Callback
+    # 3. The radio button now uses this saved index and the new callback
     calibration_method = st.radio(
         "Choose Calibration Method:",
         ("Option 1: Anchor Event (estimated block volume & return period)", "Option 2: Event frequency (estimated total rockfalls per year λ₀)"),
@@ -454,7 +455,7 @@ else:
 
     if st.button("Calculate Annualities"):
         results_data = []
-        target_periods = [1, 5, 10, 25, 30, 50, 75, 100, 125, 150, 300]
+        target_periods = [1, 5, 10, 25, 30, 50, 75, 100, 125, 150, 300, 500, 1000]
         
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
@@ -468,19 +469,19 @@ else:
                 params = tuple(st.session_state[k] for k in param_keys)
                 
                 try:
-                    # NEU: Unterscheidung, woher lambda_0 kommt
+                    # Distinguishing where lambda_0 comes from
                     if calibration_method.startswith("Option 1"):
                         lambda_anchor = 1 / anchor_return_period
                         exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
                         
                         if exceedance_prob_anchor <= 1e-9:
-                            row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "1-year [m³]": "Error", "5-year [m³]": "Error", "10-year [m³]": "Error", "25-year [m³]": "Error", "30-year [m³]": "Error", "50-year [m³]": "Error", "75-year [m³]": "Error", "100-year [m³]": "Error", "125-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error"}
+                            row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "1-year [m³]": "Error", "5-year [m³]": "Error", "10-year [m³]": "Error", "25-year [m³]": "Error", "30-year [m³]": "Error", "50-year [m³]": "Error", "75-year [m³]": "Error", "100-year [m³]": "Error", "125-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error", "500-year [m³]": "Error", "1000-year [m³]": "Error"}
                             results_data.append(row)
-                            continue # Zum nächsten Durchlauf springen
+                            continue # Skip to the next run
                             
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
                     else:
-                        # Wenn Methode 2 gewählt wurde, übernehmen wir lambda_0 direkt vom Nutzer!
+                        # if Method 2 has been selected
                         lambda_0 = user_lambda_0
                         
                     row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
@@ -499,13 +500,13 @@ else:
         if results_data:
             st.session_state.annual_results_df = pd.DataFrame(results_data)
 
-    # Tabelle anzeigen, falls berechnet
+    # Show table, if calculated
     if 'annual_results_df' in st.session_state:
         st.markdown("##### Annual Total Rockfall Frequencies (λ₀) & Calibrated Return Periods:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
         
         
-# --- ABSCHNITT: Generiere und lade gefilterte Verteilung herunter ---
+# --- SECTION: Generate and download filtered distribution ---
     st.subheader("Generate and Download Filtered Distribution")
     st.markdown("Select a custom distribution and specify the block axis range to create a custom block list. You can then select the output unit for the download.")
 
@@ -539,7 +540,7 @@ else:
         generation_possible_overall = True
 
 
-    # Display controls only if at least one distribution is available for generation
+    # Controls are only displayed if at least one distribution is available for generation
     if generation_possible_overall:
         st.info(f"Generating blocks from the fitted **{selected_download_distribution}** distribution.")
 
@@ -552,7 +553,7 @@ else:
         """)
         
         col1, col2 = st.columns(2)
-        # NEU: Eingaben sind jetzt in Volumen (m³)
+        # Inputs are now in volume (m³)
         min_block_volume = col1.number_input(
             "Minimum Block Volume [m³]:", 
             min_value=0.000001, 
@@ -570,7 +571,7 @@ else:
             on_change=clear_generated_blocks
         )
 
-        # Im Hintergrund für die Filter-Logik wieder in die Kantenlänge (m) umrechnen
+        # In the background, convert back to edge length (m) for the filter logic
         min_block_axis = min_block_volume ** (1/3)
         max_block_axis = max_block_volume ** (1/3)
 
