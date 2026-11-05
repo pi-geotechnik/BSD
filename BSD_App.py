@@ -4,7 +4,7 @@
 # App for visualising a block size distribution and fitting a probability function
 # --------------------------------------------------------------
 #
-# Code and App Version 2.2
+# Code and App Version 2.3
 # (c) Mariella Illeditsch, 2026
 # mariella.illeditsch@pi-geo.at
 # Version 1.0 Mar 2025
@@ -12,6 +12,7 @@
 # Version 1.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
 # Version 2.1 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
 # Versoin 2.2 Oct 2026: adding return periods 500 and 1000
+# Version 2.3 Nov 2026: adding KS-Test, sorting parameters and more sample files
 #
 # --------------------------------------------------------------
 
@@ -61,9 +62,12 @@ LOGO_PATH = "pi-geotechnik-1-RGB-192-30-65.png"
 
 # Example file URLs on GitHub
 EXAMPLE_FILES = {
+    "Limestone": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_dachstein_kalk_m3.txt",
+    "Paragneiss": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_langau_paragneis_m3.txt",
     "Rauwacke": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_mils_rauwacke_m3.txt",
     "Orthogneiss": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_rossatz_orthogneis_m3.txt",
-    "Slate": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_vals_schiefer_m3.txt"
+    "Slate": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_vals_schiefer_m3.txt",
+    "Meta-Sandstone": "https://github.com/pi-geotechnik/BSD/raw/main/blocklist_patergassen_metasandstone_m3.txt"
 }
 
 # --- Help functions ---
@@ -239,19 +243,19 @@ st.title("Block Size Distribution by Curve Fitting")
 st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
-    Version 2.3, July 2026
+    Version 2.3, November 2026
     * This method was originally developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at TU Wien (2023). 
     * Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4).
     ### 🧗‍♀️ Problem statement
     As demonstrated in the research above, designing rockfall protection measures based on a single *design block* often results in unreliable trajectories (i.e., kinetic energies, bounce heights, and runout distances). Furthermore, Block Size Distributions (BSDs) derived purely from debris fields are highly subjective. Linking the percentiles of such field-derived BSDs (e.g., the 95th-98th percentile according to ONR 24810) directly to the frequency of rockfall events is scientifically problematic and physically flawed.
     ### 💡 The Solution
     This application provides a more certain, accurate, verifiable, and objective workflow for holistic rockfall hazard assessment — even when based on a limited number of block size measurements (min. 65 blocks are recommended).
-    * **Curve Fitting & Blocklists:** The app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), and generates robust blocklists (intensity-frequency-relations) for rockfall simulations.
-    * **Return Period Analysis (Annuality):** It bridges the gap between spatial geometry and time. A fitted distribution natively only provides the *relative* probability of block sizes. By defining a known worst-case anchor event (a specific block size and its estimated return period), the geometrical distribution is translated into temporal return periods. This allows for the calculation of yearly rockfall events (of any size) and of block sizes for specific annualities (e.g., 30, 100, 150 and 300-year events).
+    * **Curve Fitting & Blocklists:** the app visualizes BSDs, fits advanced statistical distribution functions (like genexpon or weibull_min, also known as Rosin-Rammler), including goodness-of-fit-tests, and generates robust blocklists (intensity-frequency-relations) for rockfall simulations.
+    * **Return Period Analysis (Annuality):** it bridges the gap between spatial geometry and time. A fitted distribution natively only provides the *relative* probability of block sizes. By defining a known worst-case anchor event (a specific block size and its estimated return period), the geometrical distribution is translated into temporal return periods. This allows for the calculation of yearly rockfall events (of any size) and of block sizes for specific annualities (e.g., 30, 100, 150 and 300-year events).
     ### ⚠️ Practical Application & Expert Judgment
     Fitted statistical distributions range mathematically from dust particles to infinite rock masses, which is not useful for numerical modeling. **Expert opinion is required** to define meaningful boundaries:
-    * **Upper Cut-off (Worst-Case):** Based on the annuality analysis, unrealistic extreme events with return periods far beyond the structure's lifespan can be neglected.
-    * **Lower Cut-off:** Simulation programs generally struggle to realistically calculate the trajectories of very small blocks. Therefore, a reasonable minimum block size should be defined by the user depending on the simulation tool.
+    * **Upper Cut-off (Worst-Case):** based on the annuality analysis, unrealistic extreme events with return periods far beyond the structure's lifespan can be neglected.
+    * **Lower Cut-off:** simulation programs generally struggle to realistically calculate the trajectories of very small blocks. Therefore, a reasonable minimum block size should be defined by the user depending on the simulation tool.
     
     *This application is an open-source project.*
     """)
@@ -407,9 +411,139 @@ else:
             "lognorm [m³]": L4s**3
         })
         st.dataframe(df1.style.hide(axis="index"))
+        
+        # --- Goodness-of-Fit (Kolmogorov-Smirnov Test) ---
+        st.markdown("##### 🧪 Goodness-of-Fit (Kolmogorov-Smirnov Test)")
+
+        # Aufklappbare Info zur Interpretation des KS-Tests
+        with st.expander("ℹ️ How to interpret the KS-Test results", expanded=False):
+            st.markdown("""
+            * **$D$-Statistic ($D$):** measures the maximum vertical distance between empirical and theoretical CDFs. Lower values indicate a closer fit across the entire dataset.
+            * **$p$-Value:** If $p > 0.05$, the null hypothesis (that the sample follows the distribution) **cannot be rejected** at the 95% confidence level.
+            """)
+            
+        # KS-Test für jedes angepasste Modell gegen die gemessenen Achsen (m_achsen)
+        # scipy.stats.kstest(data, cdf_name, args=(params...))
+        ks_res = {}
+
+        # genexpon
+        d_gen, p_gen = stats.kstest(m_achsen, stats.genexpon.cdf, args=(
+            st.session_state.a1, st.session_state.b1, st.session_state.c1,
+            st.session_state.loc1, st.session_state.scale1
+        ))
+        ks_res['genexpon'] = (d_gen, p_gen)
+
+        # weibull_min
+        d_wei, p_wei = stats.kstest(m_achsen, stats.weibull_min.cdf, args=(
+            st.session_state.c2, st.session_state.loc2, st.session_state.scale2
+        ))
+        ks_res['weibull_min'] = (d_wei, p_wei)
+
+        # expon
+        d_exp, p_exp = stats.kstest(m_achsen, stats.expon.cdf, args=(
+            st.session_state.loc3, st.session_state.scale3
+        ))
+        ks_res['expon'] = (d_exp, p_exp)
+
+        # lognorm
+        d_log, p_log = stats.kstest(m_achsen, stats.lognorm.cdf, args=(
+            st.session_state.s4, st.session_state.loc4, st.session_state.scale4
+        ))
+        ks_res['lognorm'] = (d_log, p_log)
+
+        # Zusammenfassung in DataFrame
+        df_ks = pd.DataFrame({
+            "Metric": ["KS Statistic (D) ↓", "p-value (α = 0.05) ↑", "Hypothesis (fit rejected?)"],
+            "genexpon": [f"{ks_res['genexpon'][0]:.4f}", f"{ks_res['genexpon'][1]:.4f}", "Rejected" if ks_res['genexpon'][1] < 0.05 else "Not rejected"],
+            "weibull_min": [f"{ks_res['weibull_min'][0]:.4f}", f"{ks_res['weibull_min'][1]:.4f}", "Rejected" if ks_res['weibull_min'][1] < 0.05 else "Not rejected"],
+            "expon": [f"{ks_res['expon'][0]:.4f}", f"{ks_res['expon'][1]:.4f}", "Rejected" if ks_res['expon'][1] < 0.05 else "Not rejected"],
+            "lognorm": [f"{ks_res['lognorm'][0]:.4f}", f"{ks_res['lognorm'][1]:.4f}", "Rejected" if ks_res['lognorm'][1] < 0.05 else "Not rejected"]
+        })
+
+        # Styling-Funktion für rote und grüne Schrift
+        def color_hypothesis(val):
+            if val == "Rejected":
+                return "color: #D32F2F; font-weight: bold;"  # Kräftiges Rot, fett
+            elif val == "Not rejected":
+                return "color: #388E3C; font-weight: bold;"  # Angenehmes Grün, fett
+            return ""
+
+        # Style auf das DataFrame anwenden und rendern
+        styled_df_ks = df_ks.style.map(color_hypothesis).hide(axis="index")
+        st.dataframe(styled_df_ks)
+
+
+        # --- Sorting parameters ---        
+        st.markdown("##### 📈 Sorting & Dispersion Parameters")
+
+        # Aufklappbare Infobox mit transparenter mathematischer Herleitung
+        with st.expander("ℹ️ View parameter definitions, mathematical derivation & reference", expanded=False):
+            st.markdown("""
+            **1. Linear axis sorting ratio ($d_{84} / d_{16}$):**
+            * Represents the spread of the central 68% of the block size distribution.
+            * Mathematical derivation from Folk & Ward (1957):
+              Folk & Ward defined sorting via the logarithmic standard deviation $\\sigma_\\phi \\approx (\\phi_{84} - \\phi_{16})/2$, where $\\phi = -\\log_2(d)$. Converting this logarithmic standard deviation back to linear block dimensions yields:
+              $$\\frac{d_{84}}{d_{16}} = 2^{2 \\cdot \\sigma_\\phi}$$
+            * Adapted linear classification thresholds:
+              * $d_{84} / d_{16} < 2.0$ (corresponds to $\\sigma_\\phi < 0.50$): **well sorted** → narrow block size range.
+              * $2.0 \\le d_{84} / d_{16} \\le 4.0$ (corresponds to $0.50 \\le \\sigma_\\phi \\le 1.00$): **moderately sorted** → standard range for mixed natural talus deposits.
+              * $d_{84} / d_{16} > 4.0$ (corresponds to $\\sigma_\\phi > 1.00$): **poorly sorted / unsorted** → wide, highly variable block size distribution.
+
+            ---
+            **2. Volumetric spread ($V_{90} / V_{10}$):**
+            * A purely descriptive, scale-independent ratio indicating the volume span between the fine tail ($V_{10}$) and large blocks ($V_{90}$).
+            * It serves as a quantitative indicator of model behavior: comparison between empirical sample and fitted models highlights how tail extrapolation affects extreme block volumes.
+
+            ---
+            **📚 Scientific Reference:**
+            * **Folk, R. L., & Ward, W. C. (1957).** *Brazos River bar: a study in the significance of grain size parameters.* Journal of Sedimentary Research, 27(1), 3–26.
+            """)
+
+        # Hilfsberechnung für Perzentile (10, 16, 84, 90)
+        p_sel = [10, 16, 84, 90]
+        up_sel = np.percentile(m_achsen, p_sel)
+        L1s_sel = np.array(calculate_distribution_percentiles(stats.genexpon, p_sel, st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1))
+        L2s_sel = np.array(calculate_distribution_percentiles(stats.weibull_min, p_sel, st.session_state.c2, st.session_state.loc2, st.session_state.scale2))
+        L3s_sel = np.array(calculate_distribution_percentiles(stats.expon, p_sel, st.session_state.loc3, st.session_state.scale3))
+        L4s_sel = np.array(calculate_distribution_percentiles(stats.lognorm, p_sel, st.session_state.s4, st.session_state.loc4, st.session_state.scale4))
+
+        # Berechnung der relevanten Kennwerte mit Absicherung gegen Division durch 0
+        def calc_all_ratios(p_arr):
+            d10, d16, d84, d90 = p_arr
+            v10, v90 = (p_arr**3)[[0, 3]]
+
+            # Kantenlängen-Sortierung nach Folk & Ward (d)
+            rd84_16 = d84 / d16 if d16 > 0 else np.nan
+
+            # Volumenspanne (V = d³)
+            rv90_10 = v90 / v10 if v10 > 0 else np.nan
+
+            return (
+                f"{rd84_16:.2f}", f"{rv90_10:.2f}"
+            )
+
+        r_sample = calc_all_ratios(up_sel)
+        r_genexpon = calc_all_ratios(L1s_sel)
+        r_weibull = calc_all_ratios(L2s_sel)
+        r_expon = calc_all_ratios(L3s_sel)
+        r_lognorm = calc_all_ratios(L4s_sel)
+
+        df_ratios = pd.DataFrame({
+            "Parameter / Ratio (dimensionless)": [
+                "d84 / d16 (Axis Sorting Ratio - Folk & Ward)",
+                "V90 / V10 (Volumetric Uniformity Ratio)"
+            ],
+            "sample": [r_sample[0], r_sample[1]],
+            "genexpon": [r_genexpon[0], r_genexpon[1]],
+            "weibull_min": [r_weibull[0], r_weibull[1]],
+            "expon": [r_expon[0], r_expon[1]],
+            "lognorm": [r_lognorm[0], r_lognorm[1]]
+        })
+        st.dataframe(df_ratios.style.hide(axis="index"))
+            
     else:
         st.info("Fitting parameters not yet available. Results will be shown after data processing.")
-
+        
     st.divider()
     st.header("⚙️ 3. Return Period Analysis & Export")
     st.subheader("Return Period Analysis (Annual Exceedance Probability)")
