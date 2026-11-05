@@ -479,11 +479,11 @@ else:
         # Aufklappbare Infobox mit präzisen Quellen (Wannenmacher & Folk-Ward)
         with st.expander("📖 View parameter definitions, mathematical derivation & references", expanded=False):
             st.markdown("""
-            **1. Rock mass heterogeneity ($Cu_{BV}$ & $Cc_{BV}$ - Wannenmacher, 2023):**
-            These parameters adapt the classical soil mechanics grading coefficients to the three-dimensional block size distribution curve (BSD) to characterize rock mass heterogeneity:
-            * **$Cu_{BSD}$ (Coefficient of Uniformity, $d_{60}/d_{10}$):** measures the slope of the block volume distribution. A lower value indicates a more uniform (homogeneous) block size.
-            * **$Cc_{BSD}$ (Coefficient of Curvature, $d_{30}^2 / [d_{10} \\cdot d_{60}]$):** evaluates the smoothness of the block size distribution.
-              * *Note on fitted distributions:* for highly skewed, wide-span rockfall distributions (such as `genexpon` or `weibull_min`), the fitted models may yield $Cc_{BV}$ values below 1.0 or extremely high $Cu_{BV}$ values. This is a mathematical consequence of applying these ratios to distributions with extremely long, heavy tails and does not indicate a defect in the empirical field data.
+            **1. Rock mass heterogeneity ($C_{u}$ & $C_{c}$):**
+            these parameters adapt the classical soil mechanics grading coefficients to the three-dimensional block size distribution curve (BSD) to characterize rock mass heterogeneity:
+            * **$C_{u}$ (Coefficient of Uniformity, $d_{60}/d_{10}$):** measures the slope of the block distribution. A lower value indicates a more uniform (homogeneous) block size.
+            * **$C_{c}$ (Coefficient of Curvature, $d_{30}^2 / [d_{10} \\cdot d_{60}]$):** evaluates the smoothness of the block distribution.
+              * *Note on fitted distributions:* for highly skewed, wide-span rockfall distributions, the fitted models may yield $C_{c}$ values below 1.0 or extremely high $C_{u}$ values. This is a mathematical consequence of applying these ratios to distributions with extremely long, heavy tails and does not indicate a defect in the empirical field data.
 
             **2. Linear axis sorting ratio ($d_{84} / d_{16}$):**
             * Represents the spread of the central 68% of the block size distribution.
@@ -501,8 +501,8 @@ else:
 
             ---
             **📚 Scientific References:**
-            * **Wannenmacher, H. (2023).** *The Influence of Rock and Rock Mass Properties towards Prediction of TBM Penetration Rates.* Doctoral Dissertation, RWTH Aachen University (Introduction of $Cu_{BV}$ and $Cc_{BV}$ for rock mass heterogeneity, p. 37-38).
             * **Folk, R. L., & Ward, W. C. (1957).** *Brazos River bar: a study in the significance of grain size parameters.* Journal of Sedimentary Research, 27(1), 3–26.
+            * **Wannenmacher, H. (2023).** *The Influence of Rock and Rock Mass Properties towards Prediction of TBM Penetration Rates.* Doctoral Dissertation, RWTH Aachen University (Introduction of $C_{u}$ and $C_{c}$ for rock mass heterogeneity, p. 37-38).
             """)
 
         # Hilfsberechnung für Perzentile (10, 16, 30, 60, 84, 90)
@@ -543,10 +543,10 @@ else:
 
         df_ratios = pd.DataFrame({
             "Parameter / ratio": [
-                "Cu_BSD (uniformity coefficient: d60 / d10)",
-                "Cc_BSD (coefficient of curvature: d30² / [d10·d60])",
-                "d84 / d16 (axis sorting ratio)",
-                "V90 / V10 (volumetric uniformity ratio)"
+                "Cu (Coefficient of uniformity: d60 / d10)",
+                "Cc (Coefficient of curvature: d30² / [d10·d60])",
+                "d84 / d16 (Axis sorting ratio)",
+                "V90 / V10 (Volumetric uniformity ratio)"
             ],
             "sample": [r_sample[0], r_sample[1], r_sample[2], r_sample[3]],
             "genexpon": [r_genexpon[0], r_genexpon[1], r_genexpon[2], r_genexpon[3]],
