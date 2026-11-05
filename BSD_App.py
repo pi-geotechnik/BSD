@@ -481,16 +481,15 @@ else:
             st.markdown("""
             **1. Rock mass heterogeneity ($C_{u}$ & $C_{c}$):**
             these parameters adapt the classical soil mechanics grading coefficients to the three-dimensional block size distribution curve (BSD) to characterize rock mass heterogeneity:
-            * **$C_{u}$ (Coefficient of Uniformity, $d_{60}/d_{10}$):** measures the slope of the block distribution. A lower value indicates a more uniform (homogeneous) block size.
-            * **$C_{c}$ (Coefficient of Curvature, $d_{30}^2 / [d_{10} \\cdot d_{60}]$):** evaluates the smoothness of the block distribution.
-              * *Note on fitted distributions:* for highly skewed, wide-span rockfall distributions, the fitted models may yield $C_{c}$ values below 1.0 or extremely high $C_{u}$ values. This is a mathematical consequence of applying these ratios to distributions with extremely long, heavy tails and does not indicate a defect in the empirical field data.
+            * **$C_{u}$ (Coefficient of uniformity, $d_{60}/d_{10}$):** measures the slope of the block distribution. A lower value indicates a more uniform (homogeneous) block size.
+            * **$C_{c}$ (Coefficient of curvature, $d_{30}^2 / [d_{10} \\cdot d_{60}]$):** evaluates the smoothness of the block distribution.
 
             **2. Linear axis sorting ratio ($d_{84} / d_{16}$):**
             * Represents the spread of the central 68% of the block size distribution.
-            * **Mathematical derivation from Folk & Ward (1957):**
+            * Mathematical derivation from Folk & Ward (1957):
               Folk & Ward defined sorting via the logarithmic standard deviation $\\sigma_\\phi \\approx (\\phi_{84} - \\phi_{16})/2$, where $\\phi = -\\log_2(d)$. Converting this logarithmic standard deviation back to linear block dimensions yields:
               $$\\frac{d_{84}}{d_{16}} = 2^{2 \\cdot \\sigma_\\phi}$$
-            * **Adapted linear classification thresholds:**
+            * Adapted linear classification thresholds:
               * $d_{84} / d_{16} < 2.0$ (corresponds to $\\sigma_\\phi < 0.50$): **well sorted** → narrow block size range.
               * $2.0 \\le d_{84} / d_{16} \\le 4.0$ (corresponds to $0.50 \\le \\sigma_\\phi \\le 1.00$): **moderately sorted** → standard range for mixed natural talus deposits.
               * $d_{84} / d_{16} > 4.0$ (corresponds to $\\sigma_\\phi > 1.00$): **poorly sorted / unsorted** → wide, highly variable block size distribution.
