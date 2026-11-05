@@ -8,8 +8,8 @@
 # (c) Mariella Illeditsch, 2026
 # mariella.illeditsch@pi-geo.at
 # Version 1.0 Mar 2025
-# Version 1.1 Mar 2026: Line 67: Rounding of volumes removed
-# Version 1.2 Jun 2026: Adding Rosin-Rammler/Weibull_min
+# Version 1.1 Mar 2026: line 67: Rounding of volumes removed
+# Version 1.2 Jun 2026: adding Rosin-Rammler/Weibull_min
 # Version 2.1 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
 # Versoin 2.2 Oct 2026: adding return periods 500 and 1000
 # Version 2.3 Nov 2026: adding KS-Test, sorting parameters and more sample files
@@ -476,50 +476,63 @@ else:
         # --- Sorting parameters ---        
         st.markdown("##### 📈 Sorting & Dispersion Parameters")
 
-        # Aufklappbare Infobox mit transparenter mathematischer Herleitung
-        with st.expander("ℹ️ View parameter definitions, mathematical derivation & reference", expanded=False):
+        # Aufklappbare Infobox mit präzisen Quellen (Wannenmacher & Folk-Ward)
+        with st.expander("📖 View parameter definitions, mathematical derivation & references", expanded=False):
             st.markdown("""
-            **1. Linear axis sorting ratio ($d_{84} / d_{16}$):**
+            **1. Rock mass heterogeneity ($Cu_{BV}$ & $Cc_{BV}$ - Wannenmacher, 2023):**
+            These parameters adapt the classical soil mechanics grading coefficients to the three-dimensional block size distribution curve (BSD) to characterize rock mass heterogeneity:
+            * **$Cu_{BSD}$ (Coefficient of Uniformity, $d_{60}/d_{10}$):** measures the slope of the block volume distribution. A lower value indicates a more uniform (homogeneous) block size.
+            * **$Cc_{BSD}$ (Coefficient of Curvature, $d_{30}^2 / [d_{10} \\cdot d_{60}]$):** evaluates the smoothness of the block size distribution.
+              * *Note on fitted distributions:* for highly skewed, wide-span rockfall distributions (such as `genexpon` or `weibull_min`), the fitted models may yield $Cc_{BV}$ values below 1.0 or extremely high $Cu_{BV}$ values. This is a mathematical consequence of applying these ratios to distributions with extremely long, heavy tails and does not indicate a defect in the empirical field data.
+
+            **2. Linear axis sorting ratio ($d_{84} / d_{16}$):**
             * Represents the spread of the central 68% of the block size distribution.
-            * Mathematical derivation from Folk & Ward (1957):
+            * **Mathematical derivation from Folk & Ward (1957):**
               Folk & Ward defined sorting via the logarithmic standard deviation $\\sigma_\\phi \\approx (\\phi_{84} - \\phi_{16})/2$, where $\\phi = -\\log_2(d)$. Converting this logarithmic standard deviation back to linear block dimensions yields:
               $$\\frac{d_{84}}{d_{16}} = 2^{2 \\cdot \\sigma_\\phi}$$
-            * Adapted linear classification thresholds:
+            * **Adapted linear classification thresholds:**
               * $d_{84} / d_{16} < 2.0$ (corresponds to $\\sigma_\\phi < 0.50$): **well sorted** → narrow block size range.
               * $2.0 \\le d_{84} / d_{16} \\le 4.0$ (corresponds to $0.50 \\le \\sigma_\\phi \\le 1.00$): **moderately sorted** → standard range for mixed natural talus deposits.
               * $d_{84} / d_{16} > 4.0$ (corresponds to $\\sigma_\\phi > 1.00$): **poorly sorted / unsorted** → wide, highly variable block size distribution.
 
-            ---
-            **2. Volumetric spread ($V_{90} / V_{10}$):**
+            **3. Volumetric Spread ($V_{90} / V_{10}$):**
             * A purely descriptive, scale-independent ratio indicating the volume span between the fine tail ($V_{10}$) and large blocks ($V_{90}$).
-            * It serves as a quantitative indicator of model behavior: comparison between empirical sample and fitted models highlights how tail extrapolation affects extreme block volumes.
+            * It serves as a quantitative indicator of model behavior: comparing these numerical ratios between the empirical sample and the fitted models highlights how tail extrapolation mathematically affects extreme block volumes.
 
             ---
-            **📚 Scientific Reference:**
+            **📚 Scientific References:**
+            * **Wannenmacher, H. (2023).** *The Influence of Rock and Rock Mass Properties towards Prediction of TBM Penetration Rates.* Doctoral Dissertation, RWTH Aachen University (Introduction of $Cu_{BV}$ and $Cc_{BV}$ for rock mass heterogeneity, p. 37-38).
             * **Folk, R. L., & Ward, W. C. (1957).** *Brazos River bar: a study in the significance of grain size parameters.* Journal of Sedimentary Research, 27(1), 3–26.
             """)
 
-        # Hilfsberechnung für Perzentile (10, 16, 84, 90)
-        p_sel = [10, 16, 84, 90]
+        # Hilfsberechnung für Perzentile (10, 16, 30, 60, 84, 90)
+        p_sel = [10, 16, 30, 60, 84, 90]
         up_sel = np.percentile(m_achsen, p_sel)
         L1s_sel = np.array(calculate_distribution_percentiles(stats.genexpon, p_sel, st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1))
         L2s_sel = np.array(calculate_distribution_percentiles(stats.weibull_min, p_sel, st.session_state.c2, st.session_state.loc2, st.session_state.scale2))
         L3s_sel = np.array(calculate_distribution_percentiles(stats.expon, p_sel, st.session_state.loc3, st.session_state.scale3))
         L4s_sel = np.array(calculate_distribution_percentiles(stats.lognorm, p_sel, st.session_state.s4, st.session_state.loc4, st.session_state.scale4))
 
-        # Berechnung der relevanten Kennwerte mit Absicherung gegen Division durch 0
+        # Berechnung der Kennwerte nach Wannenmacher (2023) und Folk & Ward (1957)
         def calc_all_ratios(p_arr):
-            d10, d16, d84, d90 = p_arr
-            v10, v90 = (p_arr**3)[[0, 3]]
+            d10, d16, d30, d60, d84, d90 = p_arr
+            v10, v90 = (p_arr**3)[[0, 5]]
 
-            # Kantenlängen-Sortierung nach Folk & Ward (d)
+            # Heterogenitätskoeffizienten nach Wannenmacher (2023)
+            cu_bv = d60 / d10 if d10 > 0 else np.nan
+            cc_bv = (d30**2) / (d10 * d60) if (d10 > 0 and d60 > 0) else np.nan
+
+            # Kantenlängen-Sortierung nach Folk & Ward (1957)
             rd84_16 = d84 / d16 if d16 > 0 else np.nan
 
             # Volumenspanne (V = d³)
             rv90_10 = v90 / v10 if v10 > 0 else np.nan
 
             return (
-                f"{rd84_16:.2f}", f"{rv90_10:.2f}"
+                f"{cu_bv:.2f}" if not np.isnan(cu_bv) else "Error",
+                f"{cc_bv:.2f}" if not np.isnan(cc_bv) else "Error",
+                f"{rd84_16:.2f}" if not np.isnan(rd84_16) else "Error",
+                f"{rv90_10:.2f}" if not np.isnan(rv90_10) else "Error"
             )
 
         r_sample = calc_all_ratios(up_sel)
@@ -529,15 +542,17 @@ else:
         r_lognorm = calc_all_ratios(L4s_sel)
 
         df_ratios = pd.DataFrame({
-            "Parameter / Ratio (dimensionless)": [
-                "d84 / d16 (Axis Sorting Ratio - Folk & Ward)",
+            "Parameter / Ratio": [
+                "Cu_BV (Uniformity Coefficient: d60 / d10) - Wannenmacher (2023)",
+                "Cc_BV (Coefficient of Curvature: d30² / [d10·d60]) - Wannenmacher (2023)",
+                "d84 / d16 (Axis Sorting Ratio) - Folk & Ward (1957)",
                 "V90 / V10 (Volumetric Uniformity Ratio)"
             ],
-            "sample": [r_sample[0], r_sample[1]],
-            "genexpon": [r_genexpon[0], r_genexpon[1]],
-            "weibull_min": [r_weibull[0], r_weibull[1]],
-            "expon": [r_expon[0], r_expon[1]],
-            "lognorm": [r_lognorm[0], r_lognorm[1]]
+            "sample": [r_sample[0], r_sample[1], r_sample[2], r_sample[3]],
+            "genexpon": [r_genexpon[0], r_genexpon[1], r_genexpon[2], r_genexpon[3]],
+            "weibull_min": [r_weibull[0], r_weibull[1], r_weibull[2], r_weibull[3]],
+            "expon": [r_expon[0], r_expon[1], r_expon[2], r_expon[3]],
+            "lognorm": [r_lognorm[0], r_lognorm[1], r_lognorm[2], r_lognorm[3]]
         })
         st.dataframe(df_ratios.style.hide(axis="index"))
             
