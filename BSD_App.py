@@ -542,11 +542,11 @@ else:
         r_lognorm = calc_all_ratios(L4s_sel)
 
         df_ratios = pd.DataFrame({
-            "Parameter / Ratio": [
-                "Cu_BV (Uniformity Coefficient: d60 / d10) - Wannenmacher (2023)",
-                "Cc_BV (Coefficient of Curvature: d30² / [d10·d60]) - Wannenmacher (2023)",
-                "d84 / d16 (Axis Sorting Ratio) - Folk & Ward (1957)",
-                "V90 / V10 (Volumetric Uniformity Ratio)"
+            "Parameter / ratio": [
+                "Cu_BSD (uniformity coefficient: d60 / d10)",
+                "Cc_BSD (coefficient of curvature: d30² / [d10·d60])",
+                "d84 / d16 (axis sorting ratio)",
+                "V90 / V10 (volumetric uniformity ratio)"
             ],
             "sample": [r_sample[0], r_sample[1], r_sample[2], r_sample[3]],
             "genexpon": [r_genexpon[0], r_genexpon[1], r_genexpon[2], r_genexpon[3]],
