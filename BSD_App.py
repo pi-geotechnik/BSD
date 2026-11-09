@@ -453,7 +453,7 @@ else:
 
         # Zusammenfassung in DataFrame
         df_ks = pd.DataFrame({
-            "Metric": ["KS Statistic (D) ↓", "p-value (α = 0.05) ↑", "Hypothesis (fit rejected?)"],
+            "Metric": ["KS Statistic (D) ↓", "p-value (α = 0.05) ↑", "Hypothesis (fit rejected at the 95% confidence level?)"],
             "genexpon": [f"{ks_res['genexpon'][0]:.4f}", f"{ks_res['genexpon'][1]:.4f}", "Rejected" if ks_res['genexpon'][1] < 0.05 else "Not rejected"],
             "weibull_min": [f"{ks_res['weibull_min'][0]:.4f}", f"{ks_res['weibull_min'][1]:.4f}", "Rejected" if ks_res['weibull_min'][1] < 0.05 else "Not rejected"],
             "expon": [f"{ks_res['expon'][0]:.4f}", f"{ks_res['expon'][1]:.4f}", "Rejected" if ks_res['expon'][1] < 0.05 else "Not rejected"],
