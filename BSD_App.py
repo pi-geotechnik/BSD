@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # --------------------------------------------------------------
-# BSD ... a block size distribution code and app by Mariella Illeditsch
-# App for visualising a block size distribution and fitting a probability function
+# Chronos-BSD ... an open-source tool for annuality calibration of rockfall block size distributions
+# by Mariella Illeditsch
 # --------------------------------------------------------------
 #
 # Code and App Version 2.3
@@ -13,6 +13,7 @@
 # Version 2.1 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
 # Versoin 2.2 Oct 2026: adding return periods 500 and 1000
 # Version 2.3 Nov 2026: adding KS-Test, sorting parameters and more sample files
+# Version 2.4 Nov 2026: adding Poisson-Gamma confindence interval (after Garwood, 1936), removing expon model
 #
 # --------------------------------------------------------------
 
@@ -30,7 +31,7 @@ from PIL import Image
 # --- Konfiguration und Konstanten ---
 # Set page configuration
 st.set_page_config(
-    page_title="BSD Block Size Distribution by curve fitting",
+    page_title="Chronos-BSD - Annuality calibration of rockfall block size distributions",
     page_icon="🪨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -101,8 +102,8 @@ def calculate_and_visualize_percentiles(m_axes):
     ax2.set_xlabel('Block axis a [m]', fontsize=14)
     ax2.set_ylabel('Cumulative probability F(a)', fontsize=14)
     ax3.set_xscale('log')
-    from matplotlib.ticker import FormatStrFormatter
-    ax3.xaxis.set_major_formatter(FormatStrFormatter('%g')) 
+    from matplotlib.ticker import FuncFormatter
+    ax3.xaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:g}'.format(y))) 
     ax3.set_xlabel('Block axis a [m] (log)', fontsize=14)
     ax3.set_ylabel('Cumulative probability F(a)', fontsize=14)
     ax1.legend(loc='best', frameon=False)
@@ -124,12 +125,12 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     percentiles_m_axes = np.quantile(m_axes, steps)
     ax5.plot(percentiles_m_axes, steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload cdf')
     
-    if 'expon' in selected_distributions:
-        loc3, scale3 = stats.expon.fit(m_axes)
-        X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
-        ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
-        ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
-        st.session_state.loc3, st.session_state.scale3 = loc3, scale3
+    #if 'expon' in selected_distributions:
+    #    loc3, scale3 = stats.expon.fit(m_axes)
+    #    X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
+    #    ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
+    #    ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
+    #    st.session_state.loc3, st.session_state.scale3 = loc3, scale3
 
     if 'genexpon' in selected_distributions:
         a1, b1, c1, loc1, scale1 = stats.genexpon.fit(m_axes)
@@ -197,7 +198,7 @@ def clear_all_data():
         'm_achsen', 'volumes_m3', 'uploaded_file_content', 'uploaded_filename',
         'block_count', 'file_source', 'success_message', 'last_error_message',
         'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 
-        'loc3', 'scale3', 's4', 'loc4', 'scale4',
+        's4', 'loc4', 'scale4',
         'annual_results',
         'annual_results_df'
     ]
@@ -239,8 +240,8 @@ try:
 except FileNotFoundError:
     st.warning(f"Logo file not found: {LOGO_PATH}")
 
-st.title("Block Size Distribution by Curve Fitting")
-st.markdown("*A block distribution code by Mariella ILLEDITSCH*")
+st.title("Chronos-BSD")
+st.markdown("*Curve fitting, annuality calculation, and synthetic blocklist generation for trajectory simulation*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
     Version 2.3, November 2026
@@ -257,7 +258,7 @@ with st.expander("ℹ️ About This Project"):
     * **Upper Cut-off (Worst-Case):** based on the annuality analysis, unrealistic extreme events with return periods far beyond the structure's lifespan can be neglected.
     * **Lower Cut-off:** simulation programs generally struggle to realistically calculate the trajectories of very small blocks. Therefore, a reasonable minimum block size should be defined by the user depending on the simulation tool.
     
-    *This application is an open-source project.*
+    *This application is an open-source project by Mariella Illeditsch.*
     """)
     
     
@@ -348,9 +349,9 @@ with st.sidebar:
         st.info("File removed. Please upload a new file or select a sample file.")
         st.rerun()
 
-    st.subheader("Support this Project")
-    st.link_button("Buy me a coffee ☕", url='https://www.buymeacoffee.com//ztilleditsz')
-    st.markdown("Thank you for your support! ❤️")
+    #st.subheader("Support this Project")
+    #st.link_button("Buy me a coffee ☕", url='https://www.buymeacoffee.com//ztilleditsz')
+    #st.markdown("Thank you for your support! ❤️")
 
 # --- Main Content Area ---
 if st.session_state.get('success_message'):
@@ -367,27 +368,42 @@ else:
     # All subsequent calculations and displays
     m_achsen = st.session_state['m_achsen']
 
+    # =========================================================================
+    # STEP 1: EMPIRICAL DATA INPUT & EXPLORATORY BSD
+    # =========================================================================
+    st.header("Step 1: Empirical Data Input & Exploratory BSD")
+    st.markdown(
+        "Inspection of the uploaded empirical block population (sample overview, "
+        "volumetric histogram, and empirical cumulative frequency) prior to theoretical model fitting."
+    )
+
     # Display file information
     if st.session_state.get('uploaded_filename') and st.session_state.get('block_count') is not None:
-        st.header("📂 1. Input Data")
-        st.subheader("File Information")
-        st.write(f"**Filename:** {st.session_state.uploaded_filename}")
-        st.write(f"**Number of blocks:** {st.session_state.block_count}")
+        col_info1, col_info2 = st.columns(2)
+        col_info1.write(f"**Filename:** `{st.session_state.uploaded_filename}`")
+        col_info2.write(f"**Number of blocks:** `{st.session_state.block_count}`")
         
-        # Display file content
+        # Display file content in a collapsible expander
         if st.session_state.get('uploaded_file_content'):
-            with st.expander(f"Show Contents of {st.session_state.uploaded_filename}"):
-                 st.text_area("File content:", st.session_state.uploaded_file_content, height=200, disabled=True)
+            with st.expander(f"Show Raw Data of {st.session_state.uploaded_filename}"):
+                st.text_area("File content:", st.session_state.uploaded_file_content, height=150, disabled=True)
 
-    st.divider()
-    st.header("📊 2. Statistical Analysis & Distribution Fitting")
-    st.subheader("Visualization of Probability Distribution")
+    st.subheader("Empirical Block Size Distribution (Histogram & Cumulative Frequency)")
     fig1 = calculate_and_visualize_percentiles(st.session_state.m_achsen)
     st.pyplot(fig1)
 
-    st.subheader("Fitting Probability Functions")
-    selected_dists = ['genexpon', 'weibull_min', 'expon', 'lognorm'] 
-    
+    # =========================================================================
+    # STEP 2: THEORETICAL DISTRIBUTION FITTING & GOODNESS-OF-FIT
+    # =========================================================================
+    st.divider()
+    st.header("Step 2: Theoretical Distribution Fitting & Goodness-of-Fit")
+    st.markdown(
+        "Parallel Maximum Likelihood Estimation (MLE) across candidate models, "
+        "Kolmogorov-Smirnov (KS) testing, and geomechanical sorting metrics."
+    )
+
+    st.subheader("Fitted Probability Functions [PDF & CDF]")
+    selected_dists = ['genexpon', 'weibull_min', 'lognorm'] 
     fig2 = fit_distributions_and_visualize(st.session_state.m_achsen, selected_dists)
     st.pyplot(fig2)
 
@@ -396,24 +412,24 @@ else:
     table_view = st.radio("Select table view:", ("Compact", "Full"), horizontal=True)
     percentiles_to_show = [0, 25, 50, 75, 95, 96, 97, 98, 100] if table_view == "Compact" else list(range(0, 95, 5)) + list(range(95, 101))
         
-    required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 'loc3', 'scale3', 's4', 'loc4', 'scale4']
+    required_params = ['a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 's4', 'loc4', 'scale4']
     if all(param in st.session_state for param in required_params):
         upload_perz = np.percentile(m_achsen, percentiles_to_show)
         L1s = np.array(calculate_distribution_percentiles(stats.genexpon, percentiles_to_show, st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1))
         L2s = np.array(calculate_distribution_percentiles(stats.weibull_min, percentiles_to_show, st.session_state.c2, st.session_state.loc2, st.session_state.scale2))
-        L3s = np.array(calculate_distribution_percentiles(stats.expon, percentiles_to_show, st.session_state.loc3, st.session_state.scale3))
+        #L3s = np.array(calculate_distribution_percentiles(stats.expon, percentiles_to_show, st.session_state.loc3, st.session_state.scale3))
         L4s = np.array(calculate_distribution_percentiles(stats.lognorm, percentiles_to_show, st.session_state.s4, st.session_state.loc4, st.session_state.scale4))
         
         df1 = pd.DataFrame({
             "percentile": [str(p) for p in percentiles_to_show],
             "sample [m³]": upload_perz**3, "genexpon [m³]": L1s**3,
-            "weibull_min [m³]": L2s**3, "expon [m³]": L3s**3,
+            "weibull_min [m³]": L2s**3,
             "lognorm [m³]": L4s**3
         })
         st.dataframe(df1.style.hide(axis="index"))
         
         # --- Goodness-of-Fit (Kolmogorov-Smirnov Test) ---
-        st.markdown("##### 🧪 Goodness-of-Fit (Kolmogorov-Smirnov Test)")
+        st.subheader("📈 Goodness-of-Fit (Kolmogorov-Smirnov Test)")
 
         # Aufklappbare Info zur Interpretation des KS-Tests
         with st.expander("ℹ️ How to interpret the KS-Test results", expanded=False):
@@ -440,10 +456,10 @@ else:
         ks_res['weibull_min'] = (d_wei, p_wei)
 
         # expon
-        d_exp, p_exp = stats.kstest(m_achsen, stats.expon.cdf, args=(
-            st.session_state.loc3, st.session_state.scale3
-        ))
-        ks_res['expon'] = (d_exp, p_exp)
+        #d_exp, p_exp = stats.kstest(m_achsen, stats.expon.cdf, args=(
+        #    st.session_state.loc3, st.session_state.scale3
+        #))
+        #ks_res['expon'] = (d_exp, p_exp)
 
         # lognorm
         d_log, p_log = stats.kstest(m_achsen, stats.lognorm.cdf, args=(
@@ -456,7 +472,7 @@ else:
             "Metric": ["KS Statistic (D) ↓", "p-value (α = 0.05) ↑", "Hypothesis (fit rejected at the 95% confidence level?)"],
             "genexpon": [f"{ks_res['genexpon'][0]:.4f}", f"{ks_res['genexpon'][1]:.4f}", "Rejected" if ks_res['genexpon'][1] < 0.05 else "Not rejected"],
             "weibull_min": [f"{ks_res['weibull_min'][0]:.4f}", f"{ks_res['weibull_min'][1]:.4f}", "Rejected" if ks_res['weibull_min'][1] < 0.05 else "Not rejected"],
-            "expon": [f"{ks_res['expon'][0]:.4f}", f"{ks_res['expon'][1]:.4f}", "Rejected" if ks_res['expon'][1] < 0.05 else "Not rejected"],
+            #"expon": [f"{ks_res['expon'][0]:.4f}", f"{ks_res['expon'][1]:.4f}", "Rejected" if ks_res['expon'][1] < 0.05 else "Not rejected"],
             "lognorm": [f"{ks_res['lognorm'][0]:.4f}", f"{ks_res['lognorm'][1]:.4f}", "Rejected" if ks_res['lognorm'][1] < 0.05 else "Not rejected"]
         })
 
@@ -474,7 +490,7 @@ else:
 
 
         # --- Sorting parameters ---        
-        st.markdown("##### 📈 Sorting & Dispersion Parameters")
+        st.subheader("📈 Sorting & Dispersion Parameters")
 
         # Aufklappbare Infobox mit präzisen Quellen (Wannenmacher & Folk-Ward)
         with st.expander("ℹ️ View parameter definitions, mathematical derivation & references", expanded=False):
@@ -485,16 +501,10 @@ else:
             * **$C_c$ (Coefficient of curvature, $d_{30}^2 / [d_{10} \cdot d_{60}]$):** evaluates the smoothness of the block distribution.
 
             > ⚠️ **Note on number- vs. volume-based percentiles:**
-            > grading coefficients ($C_u$ and $C_c$) are derived from mass- or volume-weighted distributions ($Q_3$). In this tool, all parameters—including $C_u$ and $C_c$—are strictly calculated using **number-based percentiles ($Q_0$)**. This choice is mathematically mandatory: the calibration of exceedance probabilities to temporal return periods (annualities) relies on event rates, which require discrete block **counts** rather than cumulative volumes. Please note that number-based percentiles ($d_{10}, d_{30}, d_{60}$) naturally shift toward smaller dimensions compared to sieve-based equivalents, which should be considered when comparing these values to traditional soil mechanics thresholds.
+            > grading coefficients ($C_u$ and $C_c$) are derived from mass- or volume-weighted distributions ($Q_3$). In this tool, all parameters—including $C_u$ and $C_c$—are strictly calculated using **number-based percentiles ($Q_0$)**.
 
             **2. Linear axis sorting ratio ($d_{84} / d_{16}$):**
-            * Represents the spread of the central 68% of the block size distribution.
-            * Mathematical derivation from Folk & Ward (1957):
-              Folk & Ward defined sorting via the logarithmic standard deviation $\sigma_\phi \approx (\phi_{84} - \phi_{16})/2$, where $\phi = -\log_2(d)$. Converting this logarithmic standard deviation back to linear block dimensions yields:
-
-              $$\frac{d_{84}}{d_{16}} = 2^{2 \cdot \sigma_\phi}$$
-
-            * Adapted linear classification thresholds:
+            * Adapted linear classification thresholds from Folk and Ward, 1957:
               * $d_{84} / d_{16} < 2.0$ (corresponds to $\sigma_\phi < 0.50$): **well sorted** → narrow block size range.
               * $2.0 \le d_{84} / d_{16} \le 4.0$ (corresponds to $0.50 \le \sigma_\phi \le 1.00$): **moderately sorted** → standard range for mixed natural talus deposits.
               * $d_{84} / d_{16} > 4.0$ (corresponds to $\sigma_\phi > 1.00$): **poorly sorted / unsorted** → wide, highly variable block size distribution.
@@ -515,7 +525,7 @@ else:
         up_sel = np.percentile(m_achsen, p_sel)
         L1s_sel = np.array(calculate_distribution_percentiles(stats.genexpon, p_sel, st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1))
         L2s_sel = np.array(calculate_distribution_percentiles(stats.weibull_min, p_sel, st.session_state.c2, st.session_state.loc2, st.session_state.scale2))
-        L3s_sel = np.array(calculate_distribution_percentiles(stats.expon, p_sel, st.session_state.loc3, st.session_state.scale3))
+        #L3s_sel = np.array(calculate_distribution_percentiles(stats.expon, p_sel, st.session_state.loc3, st.session_state.scale3))
         L4s_sel = np.array(calculate_distribution_percentiles(stats.lognorm, p_sel, st.session_state.s4, st.session_state.loc4, st.session_state.scale4))
 
         # Berechnung der Kennwerte nach Wannenmacher (2023) und Folk & Ward (1957)
@@ -543,7 +553,7 @@ else:
         r_sample = calc_all_ratios(up_sel)
         r_genexpon = calc_all_ratios(L1s_sel)
         r_weibull = calc_all_ratios(L2s_sel)
-        r_expon = calc_all_ratios(L3s_sel)
+        #r_expon = calc_all_ratios(L3s_sel)
         r_lognorm = calc_all_ratios(L4s_sel)
 
         df_ratios = pd.DataFrame({
@@ -556,7 +566,7 @@ else:
             "sample": [r_sample[0], r_sample[1], r_sample[2], r_sample[3]],
             "genexpon": [r_genexpon[0], r_genexpon[1], r_genexpon[2], r_genexpon[3]],
             "weibull_min": [r_weibull[0], r_weibull[1], r_weibull[2], r_weibull[3]],
-            "expon": [r_expon[0], r_expon[1], r_expon[2], r_expon[3]],
+            #"expon": [r_expon[0], r_expon[1], r_expon[2], r_expon[3]],
             "lognorm": [r_lognorm[0], r_lognorm[1], r_lognorm[2], r_lognorm[3]]
         })
         st.dataframe(df_ratios.style.hide(axis="index"))
@@ -564,11 +574,16 @@ else:
     else:
         st.info("Fitting parameters not yet available. Results will be shown after data processing.")
         
+    # =========================================================================
+    # STEP 3: TEMPORAL RETURN PERIOD ANALYSIS & UNCERTAINTY
+    # =========================================================================
     st.divider()
-    st.header("⚙️ 3. Return Period Analysis & Export")
-    st.subheader("Return Period Analysis (Annual Exceedance Probability)")
-    st.markdown("Calibrate the fitted distribution using an estimated anchor event or an estimated event frequency. This allows translating the geometric distribution into time-based return periods (annualities).")
-    
+    st.header("Step 3: Temporal Return Period Analysis & Uncertainty Calibration")
+    st.markdown(
+        "Grounding the geometric block population into a marked Poisson point process via an empirical anchor event "
+        "(Option 1) or an annualized baseline frequency $\\lambda_0$ (Option 2). For anchor-calibrated models (Option 1), "
+        "closed-form Poisson-Gamma (Garwood) confidence intervals are evaluated to quantify the statistical uncertainty of $T_{ref}$."
+    )
     # 1. Set up a secure backup
     if 'saved_cal_method' not in st.session_state:
         st.session_state.saved_cal_method = "Option 1"
@@ -589,18 +604,70 @@ else:
         st.info("Enter the size and return period of an estimated event (e.g., the largest observed block in a given timeframe). The app will calculate the total event frequency (λ₀) and the block sizes for several return periods.")
         col_anchor1, col_anchor2 = st.columns(2)
         anchor_block_volume = col_anchor1.number_input(
-            "Block volume of the anchor event [m³]", 
+            "Block volume of the anchor event [m³]",
             min_value=0.001, value=0.5, step=0.1, format="%.3f",
             on_change=clear_annual_results_table
         )
         anchor_return_period = col_anchor2.number_input(
-            "Return period of the anchor event [years]", 
-            min_value=1, value=30, step=10,
+            "Return period of the anchor event [years]",
+            min_value=0.1, value=30.0, step=1.0, format="%.1f",
             on_change=clear_annual_results_table
         )
         anchor_block_axis = anchor_block_volume ** (1/3)
+
+        # --- Poisson-Gamma (Garwood) Uncertainty of the Anchor Event ---
+        with st.expander("📈 Poisson-Gamma (Garwood) uncertainty of the anchor event"):
+            # Create two columns: left for inputs/info, right for the clean table
+            col_exp_left, col_exp_right = st.columns([2, 3])
+
+            with col_exp_left:
+                st.markdown("**Anchor observations**")
+                k_observed = st.number_input(
+                    "Number of observed events (k):",
+                    min_value=1, value=1, step=1,
+                    help="How many blocks of at least this size (or larger) were observed in the timeframe?"
+                )
+                st.markdown(
+                    f"This analysis keeps the mean anchor at **{anchor_return_period:.1f} years**, "
+                    f"but assumes it is statistically backed by **{k_observed}** observed event(s). "
+                    f"This corresponds to an effective normalized observation period of **{k_observed * anchor_return_period:.1f} years**."
+                )
+                st.caption("The baseline rate bounds are $\lambda_{low} = 1/T_{high}$ and $\lambda_{high} = 1/T_{low}$.")
+
+            with col_exp_right:
+                st.markdown(f"**Confidence intervals for $T_{{ref}}$**")
+
+                t_ref = anchor_return_period
+                confidence_levels = [0.75, 0.80, 0.85, 0.90, 0.95]
+                interval_data = []
+
+                for conf in confidence_levels:
+                    alpha = 1.0 - conf
+                    # Garwood lower bound
+                    t_low = (2 * k_observed * t_ref) / stats.chi2.ppf(1 - alpha/2, 2 * (k_observed + 1))
+
+                    # Garwood upper bound
+                    if k_observed == 0:
+                        t_high = float('inf')
+                    else:
+                        t_high = (2 * k_observed * t_ref) / stats.chi2.ppf(alpha/2, 2 * k_observed)
+
+                    interval_data.append({
+                        "Confidence level": f"{conf*100:.0f}%",
+                        "T_low [years]": f"{t_low:.1f}",
+                        "T_high [years]": f"{t_high:.1f}"
+                    })
+
+                df_intervals = pd.DataFrame(interval_data)
+
+                # Displaying a neat, narrow table on the right side
+                st.dataframe(
+                    df_intervals.style.hide(axis="index"),
+                    use_container_width=True
+                )
+
     else:
-        st.info("Estimate the event frequency of the rock face. Enter how many blocks of ANY size fall per year on average. The app will calculate the block sizes for several return periods.")
+        st.info("Estimate how many blocks (of size >= Vmin in the sample!) fall per year on average. The app will calculate the block sizes for several return periods.")
         user_lambda_0 = st.number_input(
             "Estimated Total Rockfalls per Year (λ₀) [events/year]:", 
             min_value=0.001, value=1.0, step=0.1, format="%.3f",
@@ -614,7 +681,7 @@ else:
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
             'weibull_min': (stats.weibull_min, ['c2', 'loc2', 'scale2']),
-            'expon': (stats.expon, ['loc3', 'scale3']),
+            #'expon': (stats.expon, ['loc3', 'scale3']),
             'lognorm': (stats.lognorm, ['s4', 'loc4', 'scale4'])
         }
         
@@ -641,10 +708,14 @@ else:
                     row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
                     
                     for T_target in target_periods:
-                        target_exceedance_prob = (1 / T_target) / lambda_0
-                        target_cdf = 1 - np.clip(target_exceedance_prob, 0, 1)
-                        calc_val = dist_func.ppf(target_cdf, *params)
-                        row[f"{T_target}-year [m³]"] = f"{(calc_val**3):.4f}"
+                        # Check if the return period is mathematically valid (lambda_0 * T >= 1)
+                        if lambda_0 * T_target < 1.0:
+                            row[f"{T_target}-year [m³]"] = "n/a"
+                        else:
+                            target_exceedance_prob = (1 / T_target) / lambda_0
+                            target_cdf = 1 - target_exceedance_prob
+                            calc_val = dist_func.ppf(target_cdf, *params)
+                            row[f"{T_target}-year [m³]"] = f"{(calc_val**3):.4f}"
                         
                     results_data.append(row)
                 except Exception as e:
@@ -659,11 +730,20 @@ else:
         st.markdown("##### Annual Total Rockfall Frequencies (λ₀) & Calibrated Return Periods:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
         
+    # --- NEW: Helpful explanation note if "n/a" values occur in the table ---
+        if "n/a" in st.session_state.annual_results_df.values:
+            st.info("ℹ️ **Note on 'n/a' values:** return periods $T < 1/\\lambda_0$ are mathematically invalid because they are shorter than the mean recurrence interval of any rockfall event at this site (i.e., multiple events occur per year). For these periods, no unique extreme design block size can be defined.")
         
-# --- SECTION: Generate and download filtered distribution ---
-    st.subheader("Generate and Download Filtered Distribution")
-    st.markdown("Select a custom distribution and specify the block axis range to create a custom block list. You can then select the output unit for the download.")
-
+    # =========================================================================
+    # STEP 4: STOCHASTIC MONTE CARLO SAMPLING & BLOCKLIST EXPORT
+    # =========================================================================
+    st.divider()
+    st.header("Step 4: Stochastic Monte Carlo Sampling & Blocklist Export")
+    st.markdown(
+        "Extract synthetic, truncated block populations from the validated best-fit distribution "
+        "formatted for direct ingestion into 3D rockfall trajectory simulators (RAMMS, Rockyfor3D, and THROW)."
+    )
+    
     # Determine which distributions have fitted parameters and can be selected
     available_dists_for_download = []
     
@@ -674,8 +754,8 @@ else:
     if 'c2' in st.session_state and 'loc2' in st.session_state and 'scale2' in st.session_state:
         available_dists_for_download.append('weibull_min')
     # Check if parameters for expon are available
-    if 'loc3' in st.session_state and 'scale3' in st.session_state:
-        available_dists_for_download.append('expon')
+    #if 'loc3' in st.session_state and 'scale3' in st.session_state:
+    #    available_dists_for_download.append('expon')
     # Check if parameters for lognorm are available
     if 's4' in st.session_state and 'loc4' in st.session_state and 'scale4' in st.session_state:
         available_dists_for_download.append('lognorm')
@@ -719,7 +799,7 @@ else:
         max_block_volume = col2.number_input(
             "Maximum Block Volume [m³]:", 
             min_value=min_block_volume + 0.000001, 
-            value=3.35, 
+            value=2.00, 
             step=0.05, 
             format="%.6f", 
             on_change=clear_generated_blocks
@@ -783,9 +863,9 @@ else:
                     elif selected_download_distribution == 'weibull_min':
                         params_for_rvs = (st.session_state.c2, st.session_state.loc2, st.session_state.scale2)
                         dist_function = stats.weibull_min
-                    elif selected_download_distribution == 'expon':
-                        params_for_rvs = (st.session_state.loc3, st.session_state.scale3)
-                        dist_function = stats.expon
+                    #elif selected_download_distribution == 'expon':
+                    #    params_for_rvs = (st.session_state.loc3, st.session_state.scale3)
+                    #    dist_function = stats.expon
                     elif selected_download_distribution == 'lognorm':
                         params_for_rvs = (st.session_state.s4, st.session_state.loc4, st.session_state.scale4)
                         dist_function = stats.lognorm
