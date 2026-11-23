@@ -241,7 +241,7 @@ except FileNotFoundError:
     st.warning(f"Logo file not found: {LOGO_PATH}")
 
 st.title("Chronos-BSD")
-st.markdown("*Curve fitting, annuality calculation, and synthetic blocklist generation for trajectory simulation*")
+st.markdown("*An open-source tool for annuality calibration of rockfall block size distributions and synthetic blocklist generation for trajectory simulation*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
     Version 2.4, November 2026
