@@ -262,47 +262,34 @@ with st.expander("ℹ️ About This Project"):
     """)
     
     
-
 # --- Sidebar for user input ---
 with st.sidebar:
-    st.header("Input Data")
-    
+    st.header("Input")
+    st.divider()
     # Initialise the uploader_key
     if 'uploader_key' not in st.session_state:
         st.session_state.uploader_key = 0
-    
-    # Session state initialisation (unchanged)
-    if 'einheit' not in st.session_state: st.session_state.einheit = "Volume in m³"
 
-    selected_unit = st.selectbox("Select the unit of the input data:", ["Volume in m³", "Mass in t (density required)"])
-
-    if st.session_state.einheit != selected_unit:
-        clear_all_data() # Deletes all data, including annual_results
-        st.session_state.einheit = selected_unit
-        st.rerun()
-
-    density_input = None
-    if selected_unit == "Mass in t (density required)":
-        density_input = st.number_input("Enter the density in kg/m³:", min_value=250, value=2650, step=50)
-
+    # 1. Beispieldateien ganz oben (alle nativ in m³)
     st.subheader("Load Example Files")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
-            # Increase the 'uploader_key' to reset the upload widget
             st.session_state.uploader_key += 1
-            clear_all_data() # Delete all old data
-            
+            clear_all_data()
+
             with st.spinner(f"Loading '{name}'..."):
                 try:
                     response = requests.get(url)
                     response.raise_for_status()
                     example_file_content = response.content.decode("utf-8")
-                    m_axes, volumes_m3, block_count = process_uploaded_data(example_file_content, selected_unit, density_input)
+                    # Beispieldateien sind immer in m³
+                    m_axes, volumes_m3, block_count = process_uploaded_data(example_file_content, "Volume in m³", None)
                     if m_axes is not None:
                         st.session_state.update({
                             'uploaded_file_content': example_file_content, 'uploaded_filename': f"sample_{name}.txt",
                             'm_achsen': m_axes, 'volumes_m3': volumes_m3, 'block_count': block_count,
-                            'file_source': 'sample', 'success_message': f"The sample file '{name}' was loaded successfully."
+                            'file_source': 'sample', 'einheit': "Volume in m³",
+                            'success_message': f"The sample file '{name}' was loaded successfully."
                         })
                     else:
                         st.session_state['last_error_message'] = f"Error processing the sample file '{name}'."
@@ -310,28 +297,45 @@ with st.sidebar:
                     st.session_state['last_error_message'] = f"Error loading file from URL: {e}"
             st.rerun()
 
+    st.divider()
+
+    # 2. Eigener Upload mit zugehöriger Einheitenauswahl
     st.subheader("Upload Your Own File")
-    # Link the uploader to the key
+
+    if 'einheit' not in st.session_state:
+        st.session_state.einheit = "Volume in m³"
+
+    selected_unit = st.selectbox("Select unit of your data:", ["Volume in m³", "Mass in t (density required)"])
+
+    if st.session_state.einheit != selected_unit and st.session_state.get('file_source') == 'user':
+        clear_all_data()
+        st.session_state.einheit = selected_unit
+        st.rerun()
+    else:
+        st.session_state.einheit = selected_unit
+
+    density_input = None
+    if selected_unit == "Mass in t (density required)":
+        density_input = st.number_input("Enter density in kg/m³:", min_value=250, value=2650, step=50)
+
+    # File-Uploader
     uploaded_user_file = st.file_uploader(
-        f"Upload your own file with {'m³' if selected_unit == 'Volume in m³' else 't'} values:",
+        f"Upload text file ({'m³' if selected_unit == 'Volume in m³' else 't'}):",
         type=["txt"],
         key=f"uploader_{st.session_state.uploader_key}"
     )
     st.info("Note: Please ensure that, in the uploaded text file, a full stop ('.') is used as the decimal separator for all numbers, rather than a comma (',').")
 
     if uploaded_user_file:
-        # Check whether it is a NEW file
         if st.session_state.get('uploaded_filename') != uploaded_user_file.name:
             clear_all_data()
-            
-            # Make a note of the name straight away to stop the endless loop
             st.session_state.uploaded_filename = uploaded_user_file.name
             st.session_state.file_source = 'user'
-            
+
             with st.spinner("Processing uploaded file..."):
                 file_content = uploaded_user_file.read().decode("utf-8")
                 m_axes, volumes_m3, block_count = process_uploaded_data(file_content, selected_unit, density_input)
-                
+
                 if m_axes is not None:
                     st.session_state.m_achsen = m_axes
                     st.session_state.volumes_m3 = volumes_m3
@@ -340,10 +344,8 @@ with st.sidebar:
                     st.session_state.success_message = "Your file was processed successfully."
                 else:
                     st.session_state.last_error_message = "File could not be processed. Please check format and content."
-            
-            st.rerun() # Now run it just ONCE
+            st.rerun()
 
-    # If the user clicks the small 'X' in the uploader
     elif st.session_state.get('file_source') == 'user':
         clear_all_data()
         st.info("File removed. Please upload a new file or select a sample file.")
