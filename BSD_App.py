@@ -4,14 +4,14 @@
 # by Mariella Illeditsch
 # --------------------------------------------------------------
 #
-# Code and App Version 2.3
+# Code and App Version 2.4
 # (c) Mariella Illeditsch, 2026
 # mariella.illeditsch@pi-geo.at
 # Version 1.0 Mar 2025
 # Version 1.1 Mar 2026: line 67: Rounding of volumes removed
 # Version 1.2 Jun 2026: adding Rosin-Rammler/Weibull_min
 # Version 2.1 Jul 2026: replacing powerlaw by lognorm and adding annuality analysis
-# Versoin 2.2 Oct 2026: adding return periods 500 and 1000
+# Version 2.2 Oct 2026: adding return periods 500 and 1000
 # Version 2.3 Nov 2026: adding KS-Test, sorting parameters and more sample files
 # Version 2.4 Nov 2026: adding Poisson-Gamma confindence interval (after Garwood, 1936), removing expon model
 #
@@ -244,7 +244,7 @@ st.title("Chronos-BSD")
 st.markdown("*Curve fitting, annuality calculation, and synthetic blocklist generation for trajectory simulation*")
 with st.expander("ℹ️ About This Project"):
     st.markdown("""
-    Version 2.3, November 2026
+    Version 2.4, November 2026
     * This method was originally developed during the [doctoral thesis](https://repositum.tuwien.at/handle/20.500.12708/189867) of Mariella ILLEDITSCH at TU Wien (2023). 
     * Corresponding references: [Illeditsch & Preh (2020)](https://onlinelibrary.wiley.com/doi/abs/10.1002/geot.202000021), [Illeditsch & Preh (2024)](https://link.springer.com/article/10.1007/s11069-024-06432-4).
     ### 🧗‍♀️ Problem statement
