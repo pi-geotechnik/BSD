@@ -271,7 +271,7 @@ with st.sidebar:
         st.session_state.uploader_key = 0
 
     # 1. Beispieldateien ganz oben (alle nativ in m³)
-    st.subheader("Load Example Files")
+    st.subheader("Load Example File")
     for name, url in EXAMPLE_FILES.items():
         if st.button(f"Load sample file '{name}'"):
             st.session_state.uploader_key += 1
