@@ -695,7 +695,8 @@ else:
                 k_observed = st.number_input(
                     "Number of observed events (k):",
                     min_value=1, value=1, step=1,
-                    help="How many blocks of at least this size (or larger) were observed in the timeframe?"
+                    help="How many blocks of at least this size (or larger) were observed in the timeframe?",
+                    on_change=clear_annual_results_table
                 )
                 st.markdown(
                     f"This analysis keeps the mean anchor at **{anchor_return_period:.1f} years**, "
