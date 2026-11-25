@@ -758,8 +758,10 @@ else:
 
         # Calculate Poisson confidence limits for Option 1
         alpha_sig = 0.05
-        rate_low = stats.chi2.ppf(alpha_sig / 2, 2 * k_observed) / (2 * anchor_return_period)
-        rate_high = stats.chi2.ppf(1 - alpha_sig / 2, 2 * (k_observed + 1)) / (2 * anchor_return_period)
+        # Gesamtbeobachtungszeit dt_obs = k * T_ref
+        dt_obs = k_observed * anchor_return_period
+        rate_low = stats.chi2.ppf(alpha_sig / 2, 2 * k_observed) / (2 * dt_obs)
+        rate_high = stats.chi2.ppf(1 - alpha_sig / 2, 2 * (k_observed + 1)) / (2 * dt_obs)
         T_ref_low = 1.0 / rate_high
         T_ref_high = 1.0 / rate_low
 
