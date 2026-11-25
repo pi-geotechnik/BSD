@@ -114,11 +114,22 @@ def calculate_and_visualize_percentiles(m_axes):
     return fig
     
 def calculate_aic_bic(dist, params, data, k):
-    # Log-Likelihood berechnen
-    log_lik = np.sum(dist.logpdf(data, *params))
+    # Log-Likelihood berechnen (unendlich kleine Werte abfangen, um inf zu vermeiden)
+    log_p = dist.logpdf(data, *params)
+    log_p = np.where(np.isinf(log_p) | np.isnan(log_p), -744.44, log_p) # Schutz vor numerischen Underflows
+    log_lik = np.sum(log_p)
+
     n = len(data)
-    aic = 2 * k - 2 * log_lik
-    bic = k * np.log(n) - 2 * log_lik
+
+    # Automatische Anpassung der freien Parameter (k):
+    # Wenn der Location-Parameter (normalerweise params[-2] bei SciPy) exakt 0 ist,
+    # bedeutet das, dass floc=0 aktiv war und wir einen freien Parameter weniger haben.
+    actual_k = k
+    if len(params) >= 2 and np.isclose(params[-2], 0.0, atol=1e-9):
+        actual_k = max(1, k - 1)
+
+    aic = 2 * actual_k - 2 * log_lik
+    bic = actual_k * np.log(n) - 2 * log_lik
     return aic, bic
 
 def fit_distributions_and_visualize(m_axes, selected_distributions):
