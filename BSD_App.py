@@ -113,44 +113,55 @@ def calculate_and_visualize_percentiles(m_axes):
     plt.tight_layout()
     return fig
     
+def calculate_aic_bic(dist, params, data, k):
+    # Log-Likelihood berechnen
+    log_lik = np.sum(dist.logpdf(data, *params))
+    n = len(data)
+    aic = 2 * k - 2 * log_lik
+    bic = k * np.log(n) - 2 * log_lik
+    return aic, bic
+
 def fit_distributions_and_visualize(m_axes, selected_distributions):
     """
     Fits selected probability distributions to the data and visualizes their
-    PDFs and CDFs against the uploaded data.
+    PDFs, CDFs, and Log-Survival (CCDF) curves for upper tail diagnostics.
     """
-    fig, (ax4, ax5) = plt.subplots(nrows=1, ncols=2, figsize=(12, 4))
+    fig, (ax4, ax5, ax6) = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
 
     ax4.hist(m_axes, color='tab:blue', density=True, bins='auto', histtype='stepfilled', alpha=0.3, label='upload pdf')
     steps = np.linspace(0.01, 1.00, num=100)
     percentiles_m_axes = np.quantile(m_axes, steps)
     ax5.plot(percentiles_m_axes, steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload cdf')
-    
-    #if 'expon' in selected_distributions:
-    #    loc3, scale3 = stats.expon.fit(m_axes)
-    #    X3 = np.linspace(stats.expon.ppf(0.001, loc=loc3, scale=scale3), stats.expon.ppf(0.999, loc=loc3, scale=scale3), len(m_axes))
-    #    ax4.plot(X3, stats.expon.pdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon pdf')
-    #    ax5.plot(X3, stats.expon.cdf(X3, loc=loc3, scale=scale3), '#333333', lw=1.0, alpha=0.7, label='expon cdf')
-    #    st.session_state.loc3, st.session_state.scale3 = loc3, scale3
+    ax6.plot(percentiles_m_axes, 1 - steps, lw=8.0, color='tab:blue', alpha=0.3, label='upload tail')
 
     if 'genexpon' in selected_distributions:
         a1, b1, c1, loc1, scale1 = stats.genexpon.fit(m_axes)
+        if loc1 < 0:
+            a1, b1, c1, loc1, scale1 = stats.genexpon.fit(m_axes, floc=0)
         X1 = np.linspace(stats.genexpon.ppf(0.001, a1, b1, c1, loc=loc1, scale=scale1), stats.genexpon.ppf(0.999, a1, b1, c1, loc=loc1, scale=scale1), len(m_axes))
         ax4.plot(X1, stats.genexpon.pdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon pdf')
         ax5.plot(X1, stats.genexpon.cdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon cdf')
+        ax6.plot(X1, 1 - stats.genexpon.cdf(X1, a1, b1, c1, loc=loc1, scale=scale1), '#800020', lw=1.0, alpha=0.7, label='genexpon tail')
         st.session_state.a1, st.session_state.b1, st.session_state.c1, st.session_state.loc1, st.session_state.scale1 = a1, b1, c1, loc1, scale1
-                
+
     if 'lognorm' in selected_distributions:
         s4, loc4, scale4 = stats.lognorm.fit(m_axes)
+        if loc4 < 0:
+            s4, loc4, scale4 = stats.lognorm.fit(m_axes, floc=0)
         X4 = np.linspace(stats.lognorm.ppf(0.001, s4, loc=loc4, scale=scale4), stats.lognorm.ppf(0.999, s4, loc=loc4, scale=scale4), len(m_axes))
         ax4.plot(X4, stats.lognorm.pdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm pdf')
         ax5.plot(X4, stats.lognorm.cdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm cdf')
+        ax6.plot(X4, 1 - stats.lognorm.cdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm tail')
         st.session_state.s4, st.session_state.loc4, st.session_state.scale4 = s4, loc4, scale4
-        
+
     if 'weibull_min' in selected_distributions:
         c2, loc2, scale2 = stats.weibull_min.fit(m_axes)
+        if loc2 < 0:
+            c2, loc2, scale2 = stats.weibull_min.fit(m_axes, floc=0)
         X2 = np.linspace(stats.weibull_min.ppf(0.001, c2, loc=loc2, scale=scale2), stats.weibull_min.ppf(0.999, c2, loc=loc2, scale=scale2), len(m_axes))
         ax4.plot(X2, stats.weibull_min.pdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min pdf')
         ax5.plot(X2, stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min cdf')
+        ax6.plot(X2, 1 - stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min tail')
         st.session_state.c2, st.session_state.loc2, st.session_state.scale2 = c2, loc2, scale2
     
     counts, bins = np.histogram(m_axes, bins='auto', density=True)
@@ -160,11 +171,17 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
     ax4.set_ylim(0, max_y_value * 1.1)
     ax4.set_xlabel('Block axis a [m]', fontsize=12)
     ax4.set_ylabel('Probability density f(a)', fontsize=12)
+
     ax5.legend(loc='best', frameon=False)
     ax5.set_xscale('log')
     ax5.set_xlabel('Block axis a [m] (log)', fontsize=12)
     ax5.set_ylabel('Cumulative probability F(a)', fontsize=12)
-    
+
+    ax6.legend(loc='best', frameon=False)
+    ax6.set_yscale('log')
+    ax6.set_xlabel('Block axis a [m]', fontsize=12)
+    ax6.set_ylabel('Exceedance probability 1-F(a) (log)', fontsize=12)
+
     plt.tight_layout()
     return fig
     
@@ -207,13 +224,17 @@ def clear_all_data():
             del st.session_state[key]
             
 def clear_annual_results_table():
-    """Clears the annual results table when anchor inputs change."""
     if 'annual_results_df' in st.session_state:
-        del st.session_state['annual_results_df']
+        del st.session_state.annual_results_df
+    if 'ci_results_df' in st.session_state:
+        del st.session_state.ci_results_df
 
 def handle_cal_method_change():
-    clear_annual_results_table()
-    st.session_state.saved_cal_method = st.session_state.calibration_method_selector
+    # Löscht beide Tabellen bei Methodenwechsel
+    if 'annual_results_df' in st.session_state:
+        del st.session_state.annual_results_df
+    if 'ci_results_df' in st.session_state:
+        del st.session_state.ci_results_df
     
 def clear_generated_blocks():
     """Clears the generated blocks and download button when input parameters change."""
@@ -430,14 +451,30 @@ else:
         })
         st.dataframe(df1.style.hide(axis="index"))
         
-        # --- Goodness-of-Fit (Kolmogorov-Smirnov Test) ---
-        st.subheader("📈 Goodness-of-Fit (Kolmogorov-Smirnov Test)")
+        # --- NEW: Expander for Fitted Parameters ---
+        with st.expander("🛠️ Show Fitted Distribution Parameters"):
+            df_params = pd.DataFrame({
+                "Distribution": ["genexpon", "weibull_min", "lognorm"],
+                "Parameters": [
+                    f"a={st.session_state.a1:.6f}, b={st.session_state.b1:.6f}, c={st.session_state.c1:.6f}, scale={st.session_state.scale1:.6f}, loc={st.session_state.loc1:.6f}",
+                    f"c={st.session_state.c2:.6f}, scale={st.session_state.scale2:.6f}, loc={st.session_state.loc2:.6f}",
+                    f"s={st.session_state.s4:.6f}, scale={st.session_state.scale4:.6f}, loc={st.session_state.loc4:.6f}"
+                ]
+            })
+            st.dataframe(df_params.style.hide(axis="index"), use_container_width=True)
+            
+        # --- Goodness-of-Fit (Kolmogorov-Smirnov Test and Information Criteria) ---
+        st.subheader("📈 Goodness-of-Fit")
 
         # Aufklappbare Info zur Interpretation des KS-Tests
-        with st.expander("ℹ️ How to interpret the KS-Test results", expanded=False):
+        with st.expander("ℹ️ How to interpret the KS and Information Criteria parameters", expanded=False):
             st.markdown("""
-            * **$D$-Statistic ($D$):** measures the maximum vertical distance between empirical and theoretical CDFs. Lower values indicate a closer fit across the entire dataset.
-            * **$p$-Value:** If $p > 0.05$, the null hypothesis (that the sample follows the distribution) **cannot be rejected** at the 95% confidence level.
+            * **$D$-Statistic ($D$):** Measures the maximum vertical distance between the empirical and theoretical CDFs. Lower values indicate a closer fit across the entire dataset.
+            * **Asymptotic $p$-Value:** If $p > 0.05$, the null hypothesis (that the sample follows the distribution) **cannot be rejected** at the 95% confidence level.
+              * *Note on Statistical Validity:* Because distribution parameters are estimated directly from the sample via MLE, these asymptotic p-values are conservatively biased (inflated) and should primarily be used as a comparative relative metric (Lilliefors, 1967).
+            * **AIC & BIC (Akaike & Bayesian Information Criteria):** Evaluate the quality of each fit by balancing goodness-of-fit against model complexity (the number of fitted parameters, $k$).
+              * **Lower (or more negative) values are superior.**
+              * BIC imposes a stronger penalty on parameter redundancy than AIC, making it highly valuable for preventing "overfitting" in smaller samples (e.g., $n < 50$).
             """)
             
         # KS-Test für jedes angepasste Modell gegen die gemessenen Achsen (m_achsen)
@@ -469,13 +506,44 @@ else:
         ))
         ks_res['lognorm'] = (d_log, p_log)
 
+        # Calculate densities (PDF) first to safely handle numerical boundaries
+        pdf_gen = stats.genexpon.pdf(m_achsen, st.session_state.a1, st.session_state.b1, st.session_state.c1, loc=st.session_state.loc1, scale=st.session_state.scale1)
+        pdf_wei = stats.weibull_min.pdf(m_achsen, st.session_state.c2, loc=st.session_state.loc2, scale=st.session_state.scale2)
+        pdf_log = stats.lognorm.pdf(m_achsen, st.session_state.s4, loc=st.session_state.loc4, scale=st.session_state.scale4)
+
+        # Clip values slightly above 0 (e.g. 1e-12) to prevent taking log(0) which yields -inf
+        pdf_gen = np.clip(pdf_gen, 1e-12, None)
+        pdf_wei = np.clip(pdf_wei, 1e-12, None)
+        pdf_log = np.clip(pdf_log, 1e-12, None)
+
+        # Sum of log-densities (Log-Likelihood) without numerical failures
+        ll_gen = np.sum(np.log(pdf_gen))
+        ll_wei = np.sum(np.log(pdf_wei))
+        ll_log = np.sum(np.log(pdf_log))
+
+        # Number of parameters: genexpon has 3 if loc1=0 else 4. weibull_min & lognorm have 2 if loc=0 else 3.
+        k_gen = 3 if st.session_state.loc1 == 0 else 4
+        k_wei = 2 if st.session_state.loc2 == 0 else 3
+        k_log = 2 if st.session_state.loc4 == 0 else 3
+
+        n_samples = len(m_achsen)
+
+        aic_gen, bic_gen = 2 * k_gen - 2 * ll_gen, k_gen * np.log(n_samples) - 2 * ll_gen
+        aic_wei, bic_wei = 2 * k_wei - 2 * ll_wei, k_wei * np.log(n_samples) - 2 * ll_wei
+        aic_log, bic_log = 2 * k_log - 2 * ll_log, k_log * np.log(n_samples) - 2 * ll_log
+
         # Zusammenfassung in DataFrame
         df_ks = pd.DataFrame({
-            "Metric": ["KS Statistic (D) ↓", "p-value (α = 0.05) ↑", "Hypothesis (fit rejected at the 95% confidence level?)"],
-            "genexpon": [f"{ks_res['genexpon'][0]:.4f}", f"{ks_res['genexpon'][1]:.4f}", "Rejected" if ks_res['genexpon'][1] < 0.05 else "Not rejected"],
-            "weibull_min": [f"{ks_res['weibull_min'][0]:.4f}", f"{ks_res['weibull_min'][1]:.4f}", "Rejected" if ks_res['weibull_min'][1] < 0.05 else "Not rejected"],
-            #"expon": [f"{ks_res['expon'][0]:.4f}", f"{ks_res['expon'][1]:.4f}", "Rejected" if ks_res['expon'][1] < 0.05 else "Not rejected"],
-            "lognorm": [f"{ks_res['lognorm'][0]:.4f}", f"{ks_res['lognorm'][1]:.4f}", "Rejected" if ks_res['lognorm'][1] < 0.05 else "Not rejected"]
+            "Metric": [
+                "KS Statistic (D) ↓",
+                "Asymptotic p-value (α = 0.05) ↑",
+                "Hypothesis (fit rejected at 95%?)",
+                "AIC (Akaike Info Criterion) ↓",
+                "BIC (Bayesian Info Criterion) ↓"
+            ],
+            "genexpon": [f"{ks_res['genexpon'][0]:.4f}", f"{ks_res['genexpon'][1]:.4f}", "Rejected" if ks_res['genexpon'][1] < 0.05 else "Not rejected", f"{aic_gen:.1f}", f"{bic_gen:.1f}"],
+            "weibull_min": [f"{ks_res['weibull_min'][0]:.4f}", f"{ks_res['weibull_min'][1]:.4f}", "Rejected" if ks_res['weibull_min'][1] < 0.05 else "Not rejected", f"{aic_wei:.1f}", f"{bic_wei:.1f}"],
+            "lognorm": [f"{ks_res['lognorm'][0]:.4f}", f"{ks_res['lognorm'][1]:.4f}", "Rejected" if ks_res['lognorm'][1] < 0.05 else "Not rejected", f"{aic_log:.1f}", f"{bic_log:.1f}"]
         })
 
         # Styling-Funktion für rote und grüne Schrift
@@ -678,39 +746,77 @@ else:
 
     if st.button("Calculate Annualities"):
         results_data = []
+        ci_data = []
         target_periods = [1, 5, 10, 25, 30, 50, 75, 100, 125, 150, 300, 500, 1000]
-        
+
         distributions_dict = {
             'genexpon': (stats.genexpon, ['a1', 'b1', 'c1', 'loc1', 'scale1']),
             'weibull_min': (stats.weibull_min, ['c2', 'loc2', 'scale2']),
-            #'expon': (stats.expon, ['loc3', 'scale3']),
             'lognorm': (stats.lognorm, ['s4', 'loc4', 'scale4'])
         }
-        
+
+        # Calculate Poisson confidence limits for Option 1
+        alpha_sig = 0.05
+        rate_low = stats.chi2.ppf(alpha_sig / 2, 2 * k_observed) / (2 * anchor_return_period)
+        rate_high = stats.chi2.ppf(1 - alpha_sig / 2, 2 * (k_observed + 1)) / (2 * anchor_return_period)
+        T_ref_low = 1.0 / rate_high
+        T_ref_high = 1.0 / rate_low
+
         for dist_name, (dist_func, param_keys) in distributions_dict.items():
             if all(k in st.session_state for k in param_keys):
                 params = tuple(st.session_state[k] for k in param_keys)
-                
+
                 try:
                     # Distinguishing where lambda_0 comes from
                     if calibration_method.startswith("Option 1"):
                         lambda_anchor = 1 / anchor_return_period
                         exceedance_prob_anchor = 1 - dist_func.cdf(anchor_block_axis, *params)
-                        
+
                         if exceedance_prob_anchor <= 1e-9:
                             row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "1-year [m³]": "Error", "5-year [m³]": "Error", "10-year [m³]": "Error", "25-year [m³]": "Error", "30-year [m³]": "Error", "50-year [m³]": "Error", "75-year [m³]": "Error", "100-year [m³]": "Error", "125-year [m³]": "Error", "150-year [m³]": "Error", "300-year [m³]": "Error", "500-year [m³]": "Error", "1000-year [m³]": "Error"}
                             results_data.append(row)
-                            continue # Skip to the next run
-                            
+                            continue
+
                         lambda_0 = lambda_anchor / exceedance_prob_anchor
+
+                        # --- Calculate V150 Confidence Limits ---
+                        lambda_0_low = (1 / T_ref_high) / exceedance_prob_anchor
+                        lambda_0_high = (1 / T_ref_low) / exceedance_prob_anchor
+
+                        # V150 Point Estimate
+                        if lambda_0 * 150 < 1.0:
+                            v150_point_val = "n/a"
+                        else:
+                            q_point = 1.0 - (1.0 / 150) / lambda_0
+                            v150_point_val = f"{(dist_func.ppf(q_point, *params)**3):.2f} m³"
+
+                        # V150 Lower Bound
+                        if lambda_0_low * 150 < 1.0:
+                            # Falls die Grenze mathematisch überschritten wird, ist der physikalische
+                            # Mindestwert das historische Anker-Ereignis selbst (anchor_block_volume)
+                            v150_low_val = f"{anchor_block_volume:.2f} m³"
+                        else:
+                            q_low = 1.0 - (1.0 / 150) / lambda_0_low
+                            v150_low_val = f"{(dist_func.ppf(q_low, *params)**3):.2f} m³"
+
+                        # V150 Upper Bound
+                        if lambda_0_high * 150 < 1.0:
+                            v150_high_val = "n/a"
+                        else:
+                            q_high = 1.0 - (1.0 / 150) / lambda_0_high
+                            v150_high_val = f"{(dist_func.ppf(q_high, *params)**3):.2f} m³"
+
+                        ci_data.append({
+                            "Distribution": dist_name,
+                            "V₁₅₀ Point Estimate": v150_point_val,
+                            "95% Confidence Interval [V₁₅₀,low - V₁₅₀,high]": f"[{v150_low_val} – {v150_high_val}]" if v150_low_val != "n/a" else "n/a"
+                        })
                     else:
-                        # if Method 2 has been selected
                         lambda_0 = user_lambda_0
-                        
+
                     row = {"Distribution": dist_name, "λ₀ [events/year]": f"{lambda_0:.3f}"}
-                    
+
                     for T_target in target_periods:
-                        # Check if the return period is mathematically valid (lambda_0 * T >= 1)
                         if lambda_0 * T_target < 1.0:
                             row[f"{T_target}-year [m³]"] = "n/a"
                         else:
@@ -718,24 +824,34 @@ else:
                             target_cdf = 1 - target_exceedance_prob
                             calc_val = dist_func.ppf(target_cdf, *params)
                             row[f"{T_target}-year [m³]"] = f"{(calc_val**3):.4f}"
-                        
+
                     results_data.append(row)
                 except Exception as e:
                     row = {"Distribution": dist_name, "λ₀ [events/year]": "Error", "30-year [m³]": "Error", "100-year [m³]": "Error", "300-year [m³]": "Error"}
                     results_data.append(row)
-        
+
         if results_data:
             st.session_state.annual_results_df = pd.DataFrame(results_data)
+        if ci_data:
+            st.session_state.ci_results_df = pd.DataFrame(ci_data)
+        else:
+            if 'ci_results_df' in st.session_state:
+                del st.session_state.ci_results_df
 
-    # Show table, if calculated
     if 'annual_results_df' in st.session_state:
         st.markdown("##### Annual Total Rockfall Frequencies (λ₀) & Calibrated Return Periods:")
         st.dataframe(st.session_state.annual_results_df.style.hide(axis="index"))
-        
-    # --- NEW: Helpful explanation note if "n/a" values occur in the table ---
+
+        # Notiz, falls n/a Werte vorkommen
         if "n/a" in st.session_state.annual_results_df.values:
             st.info("ℹ️ **Note on 'n/a' values:** return periods $T < 1/\\lambda_0$ are mathematically invalid because they are shorter than the mean recurrence interval of any rockfall event at this site (i.e., multiple events occur per year). For these periods, no unique extreme design block size can be defined.")
-        
+
+    if calibration_method.startswith("Option 1") and 'ci_results_df' in st.session_state:
+        st.markdown("##### 🎯 95% Confidence Intervals for the 150-Year Design Block ($V_{150}$):")
+        st.dataframe(st.session_state.ci_results_df.style.hide(axis="index"), use_container_width=True)
+        st.caption("ℹ️ The confidence intervals propagate the statistical Poisson uncertainty of the historical anchor event ($T_{ref}$ based on $k$) into the 150-year design block.")
+
+
     # =========================================================================
     # STEP 4: STOCHASTIC MONTE CARLO SAMPLING & BLOCKLIST EXPORT
     # =========================================================================
