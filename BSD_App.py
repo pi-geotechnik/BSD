@@ -159,6 +159,8 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
         s4, loc4, scale4 = stats.lognorm.fit(m_axes)
         if loc4 < 0:
             s4, loc4, scale4 = stats.lognorm.fit(m_axes, floc=0)
+        elif loc4 >= np.min(m_axes):
+            s4, loc4, scale4 = stats.lognorm.fit(m_axes, floc=np.min(m_axes) * 0.95)
         X4 = np.linspace(stats.lognorm.ppf(0.001, s4, loc=loc4, scale=scale4), stats.lognorm.ppf(0.999, s4, loc=loc4, scale=scale4), len(m_axes))
         ax4.plot(X4, stats.lognorm.pdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm pdf')
         ax5.plot(X4, stats.lognorm.cdf(X4, s4, loc=loc4, scale=scale4), '#006400', lw=1.0, alpha=0.7, label='lognorm cdf')
@@ -167,8 +169,12 @@ def fit_distributions_and_visualize(m_axes, selected_distributions):
 
     if 'weibull_min' in selected_distributions:
         c2, loc2, scale2 = stats.weibull_min.fit(m_axes)
+        # Wenn loc negativ ist -> floc=0
         if loc2 < 0:
             c2, loc2, scale2 = stats.weibull_min.fit(m_axes, floc=0)
+        # Wenn loc über dem kleinsten Messwert liegt -> Schranke knapp unter Minimum
+        elif loc2 >= np.min(m_axes):
+            c2, loc2, scale2 = stats.weibull_min.fit(m_axes, floc=np.min(m_axes) * 0.95)
         X2 = np.linspace(stats.weibull_min.ppf(0.001, c2, loc=loc2, scale=scale2), stats.weibull_min.ppf(0.999, c2, loc=loc2, scale=scale2), len(m_axes))
         ax4.plot(X2, stats.weibull_min.pdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min pdf')
         ax5.plot(X2, stats.weibull_min.cdf(X2, c2, loc=loc2, scale=scale2), '#C05A3E', lw=1.0, alpha=0.7, label='weibull_min cdf')
@@ -806,9 +812,8 @@ else:
 
                         # V150 Lower Bound
                         if lambda_0_low * 150 < 1.0:
-                            # Falls die Grenze mathematisch überschritten wird, ist der physikalische
-                            # Mindestwert das historische Anker-Ereignis selbst (anchor_block_volume)
-                            v150_low_val = f"{anchor_block_volume:.2f} m³"
+                            # Das optimistische Ende fällt unter das Erfassungslimit der Kurve (V_min)
+                            v150_low_val = "not defined (< V_min)"
                         else:
                             q_low = 1.0 - (1.0 / 150) / lambda_0_low
                             v150_low_val = f"{(dist_func.ppf(q_low, *params)**3):.2f} m³"
@@ -820,10 +825,16 @@ else:
                             q_high = 1.0 - (1.0 / 150) / lambda_0_high
                             v150_high_val = f"{(dist_func.ppf(q_high, *params)**3):.2f} m³"
 
+                        # Formatierung des Konfidenzintervalls
+                        if v150_low_val == "not defined (< V_min)":
+                            ci_interval_str = f"[< V_min – {v150_high_val}]"
+                        else:
+                            ci_interval_str = f"[{v150_low_val} – {v150_high_val}]"
+
                         ci_data.append({
                             "Distribution": dist_name,
                             "V₁₅₀ Point Estimate": v150_point_val,
-                            "95% Confidence Interval [V₁₅₀,low - V₁₅₀,high]": f"[{v150_low_val} – {v150_high_val}]" if v150_low_val != "n/a" else "n/a"
+                            "95% Confidence Interval [V₁₅₀,low - V₁₅₀,high]": ci_interval_str
                         })
                     else:
                         lambda_0 = user_lambda_0
@@ -1002,15 +1013,18 @@ else:
                         params_for_rvs = (st.session_state.s4, st.session_state.loc4, st.session_state.scale4)
                         dist_function = stats.lognorm
                     
-                    # Generate more samples to account for filtering
-                    # This ensures we have enough data points after filtering for narrow ranges
-                    generated_raw_axes = dist_function.rvs(*params_for_rvs, size=num_samples * 10) 
-                    
-                    # Filter samples based on min/max block axis
-                    filtered_samples_m_axis = [s for s in generated_raw_axes if min_block_axis <= s <= max_block_axis]
-                    
-                    # Take exactly num_samples, or fewer if not enough were generated, and sort
-                    final_generated_blocks_m_axis = sorted(filtered_samples_m_axis[:num_samples])
+                    # Fester Seed für garantierte Reproduzierbarkeit
+                    np.random.seed(42)
+
+                    # Echte Inverse-Transform-Sampling-Methode über das begrenzte Intervall
+                    u_min = dist_function.cdf(min_block_axis, *params_for_rvs)
+                    u_max = dist_function.cdf(max_block_axis, *params_for_rvs)
+
+                    # Ziehung gleichverteilter Wahrscheinlichkeiten im Intervall [u_min, u_max]
+                    u = np.random.uniform(u_min, u_max, size=num_samples)
+
+                    # Inverse CDF (Percent Point Function, PPF) liefert exakt num_samples
+                    final_generated_blocks_m_axis = sorted(dist_function.ppf(u, *params_for_rvs))
                     
                     if final_generated_blocks_m_axis:
                         # Convert to desired output unit
