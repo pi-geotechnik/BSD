@@ -231,10 +231,11 @@ def clear_all_data():
     keys_to_clear = [
         'm_achsen', 'volumes_m3', 'uploaded_file_content', 'uploaded_filename',
         'block_count', 'file_source', 'success_message', 'last_error_message',
-        'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2', 
+        'a1', 'b1', 'c1', 'loc1', 'scale1', 'c2', 'loc2', 'scale2',
         's4', 'loc4', 'scale4',
         'annual_results',
-        'annual_results_df'
+        'annual_results_df',
+        'ci_results_df'
     ]
     for key in keys_to_clear:
         if key in st.session_state:
